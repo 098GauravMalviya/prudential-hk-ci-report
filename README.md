@@ -35,6 +35,12 @@ The app reads two more variables, `REPORT_USERNAME` and `REPORT_PASSWORD`. Set t
 
 `report_builder/build.py` also needs the report content files (`body.html`, `data.js`, `dashboard.js`) and a collected database. Neither is published here.
 
+## Updates (22 Nov 2026)
+
+- `report_builder/`: front-end modules for the redesigned report (overview, charts at the top, module cards, image-first cards and detail panel, geo footprint, captures wall, mainland social conversation from Xiaohongshu and WeChat, findings explorer, theme CSS).
+- `pipeline/tools/`: new collectors for Android reviews, IA market share, HK media sites, news and evidence images, page captures and title translation.
+- `pipeline/tools/scrape_prudential_newsroom.py` reads press-office contacts from `media_contacts.local.json` (git-ignored) rather than from code.
+
 ## Data handling
 
 - Public sources only.

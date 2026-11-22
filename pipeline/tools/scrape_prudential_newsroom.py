@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import sys
 from pathlib import Path
 from urllib.parse import urljoin
@@ -29,11 +30,9 @@ LIST_URL = BASE + "/en/about-us/newsroom/"
 WINDOW = (dt.date(2025, 11, 1), dt.date(2026, 10, 31))
 # Media contacts supplied by the user (screenshot of a press-release "Media" block followed by "About Prudential plc").
 # Not present on the prudential.com.hk newsroom article pages, so kept as a separate, user-provided sheet.
-# Personal contact details are not published in this repository. Load them locally from a git-ignored file
-# (media_contacts.local.json: [["Name", "Phone", "Email"], ...]) if you need the sheet.
-import json as _json
-_mc = Path(__file__).with_name("media_contacts.local.json")
-MEDIA_CONTACTS = [tuple(x) for x in _json.loads(_mc.read_text(encoding="utf-8"))] if _mc.exists() else []
+# Kept out of the public repo: put [["Name", "Phone", "Email"], ...] in media_contacts.local.json next to this file (git-ignored).
+_MC = Path(__file__).with_name("media_contacts.local.json")
+MEDIA_CONTACTS = [tuple(x) for x in json.loads(_MC.read_text(encoding="utf-8"))] if _MC.exists() else []
 MEDIA_SOURCE = "User-provided (press-release 'Media' contact block); not found on prudential.com.hk newsroom pages as of 2026-11-11"
 
 

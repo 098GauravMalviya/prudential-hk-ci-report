@@ -84,7 +84,7 @@ def main():
     OUT.write_text(json.dumps(cache, ensure_ascii=False, indent=0), encoding="utf-8")
     n = 0
     for k, v in cache.items():
-        if v["src"] == "observation":
+        if v.get("src", "observation") == "observation":   # older cache entries carry no "src"; a non-record key updates nothing
             n += con.execute("update observations set english_summary=?, translation_status='machine_summary' where record_id=? and language='zh'",
                              (v["en"], k)).rowcount
     con.commit()

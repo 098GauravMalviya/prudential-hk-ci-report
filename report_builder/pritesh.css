@@ -1,0 +1,248 @@
+<style>
+/* ==========================================================================
+   Pritesh / InkTank skin (22 Nov 2026) — UI only. Loaded last; content, data and behaviour unchanged.
+   Monochrome enterprise look: neutral greys, hairline borders, 4-6px radii, no shadows, uppercase mono headings,
+   flat bordered controls with black active pills, underline tabs, tiny mono tags, green mono recommendation boxes.
+   ========================================================================== */
+:root:not([data-theme="dark"]) {
+  --pk-bg:#ececec; --pk-surface:#f4f4f4; --pk-surface-2:#e6e6e6; --pk-line:#d6d6d6; --pk-line-2:#c4c4c4;
+  --pk-ink:#111111; --pk-ink-2:#4a4a4a; --pk-ink-3:#7a7a7a; --pk-active:#111111; --pk-active-ink:#ffffff;
+  --pk-link:#1d5fa8; --pk-good:#15803d; --pk-rec:#e2f1e6; --pk-rec-b:#b9dcc4; --pk-rec-ink:#14532d;
+  --pk-tag:#dbe8fb; --pk-tag-b:#b9cff3; --pk-tag-ink:#1e3a8a; --pk-hi:#fbe1e1; --pk-hi-b:#f1b9b9; --pk-hi-ink:#b42318;
+}
+:root[data-theme="dark"] {
+  --pk-bg:#0a0a0a; --pk-surface:#111111; --pk-surface-2:#151515; --pk-line:#222222; --pk-line-2:#2a2a2a;
+  --pk-ink:#ffffff; --pk-ink-2:#b0b0b0; --pk-ink-3:#888888; --pk-active:#ffffff; --pk-active-ink:#000000;
+  --pk-link:#7db8ff; --pk-good:#34d399; --pk-rec:#0f1f15; --pk-rec-b:#1e3a28; --pk-rec-ink:#86efac;
+  --pk-tag:#13233d; --pk-tag-b:#1e3a64; --pk-tag-ink:#93c5fd; --pk-hi:#2a1214; --pk-hi-b:#4a1e22; --pk-hi-ink:#fca5a5;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --pk-bg:#0a0a0a; --pk-surface:#111111; --pk-surface-2:#151515; --pk-line:#222222; --pk-line-2:#2a2a2a;
+  --pk-ink:#ffffff; --pk-ink-2:#b0b0b0; --pk-ink-3:#888888; --pk-active:#ffffff; --pk-active-ink:#000000;
+  --pk-link:#7db8ff; --pk-good:#34d399; --pk-rec:#0f1f15; --pk-rec-b:#1e3a28; --pk-rec-ink:#86efac;
+  --pk-tag:#13233d; --pk-tag-b:#1e3a64; --pk-tag-ink:#93c5fd; --pk-hi:#2a1214; --pk-hi-b:#4a1e22; --pk-hi-ink:#fca5a5; } }
+
+/* map every existing token layer (template, Kimi theme, Stitch) onto the skin */
+:root, :root[data-theme] {
+  --bg:var(--pk-bg); --surface:var(--pk-surface); --surface-2:var(--pk-surface-2); --line:var(--pk-line);
+  --ink:var(--pk-ink); --ink-2:var(--pk-ink-2); --ink-3:var(--pk-ink-3); --link:var(--pk-link); --shadow:none;
+  --k-bg:var(--pk-bg); --k-card:var(--pk-surface); --k-soft:var(--pk-surface-2); --k-border:var(--pk-line); --k-text:var(--pk-ink); --k-muted:var(--pk-ink-2);
+  --k-shadow:none; --k-shadow-soft:none; --k-rec:var(--pk-rec); --k-rec-b:var(--pk-rec-b);
+  --s-canvas:var(--pk-bg); --s-surface:var(--pk-surface); --s-line:var(--pk-line); --s-line2:var(--pk-line-2); --s-ink:var(--pk-ink); --s-ink2:var(--pk-ink-2); --s-ink3:var(--pk-ink-3);
+  --pk-mono: ui-monospace, "JetBrains Mono", "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --pk-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+html, body { background:var(--pk-bg) !important; color:var(--pk-ink); }
+body { font-family:var(--pk-sans) !important; -webkit-font-smoothing:antialiased; font-feature-settings:'tnum'; }
+.num, td, .ov-src b, .sec-period, .stat b, .kpi b { font-variant-numeric: tabular-nums; }
+::-webkit-scrollbar { width:5px; height:5px; } ::-webkit-scrollbar-track { background:var(--pk-bg); }
+::-webkit-scrollbar-thumb { background:var(--pk-line); border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:var(--pk-line-2); }
+
+/* ---------------- header: monogram + mono uppercase title + status badge ---------------- */
+header.topbar { background:var(--pk-bg) !important; border-bottom:1px solid var(--pk-line) !important; box-shadow:none !important; backdrop-filter:none !important; }
+header.topbar .brand img.logo { display:none !important; }
+header.topbar .brand::before { content:"PRU"; flex:0 0 auto; width:36px; height:36px; border-radius:50%; border:1px solid var(--pk-line-2); background:var(--pk-surface);
+  display:inline-flex; align-items:center; justify-content:center; font:700 10.5px var(--pk-sans); letter-spacing:-.01em; color:var(--pk-ink); margin-right:12px; }
+header.topbar .brand { display:flex; align-items:center; }
+header.topbar .brand-main { font:700 13px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink) !important; }
+header.topbar .brand-main::after { content:"Enterprise Intelligence"; margin-left:10px; padding:2px 8px; border-radius:4px; border:1px solid var(--pk-line-2); background:var(--pk-surface-2);
+  font:600 10px var(--pk-mono); letter-spacing:0; text-transform:none; color:var(--pk-good); vertical-align:2px; }
+header.topbar .brand-text > :not(.brand-main) { font:400 12px var(--pk-sans) !important; color:var(--pk-ink-2) !important; }
+
+/* buttons: flat, bordered, small radius; primary = black pill */
+.btn, button.btn { background:var(--pk-surface) !important; color:var(--pk-ink) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important;
+  box-shadow:none !important; font:600 12px var(--pk-sans) !important; padding:6px 12px !important; }
+.btn:hover { background:var(--pk-surface-2) !important; border-color:var(--pk-line-2) !important; }
+.btn.primary, button.btn.primary { background:var(--pk-active) !important; color:var(--pk-active-ink) !important; border-color:var(--pk-active) !important; }
+.btn.icon { width:32px; height:32px; padding:0 !important; display:inline-flex; align-items:center; justify-content:center; }
+
+/* ---------------- monitor banner + filter bar: flat context bar instead of navy hero ---------------- */
+.shellhead { background:transparent !important; border:0 !important; box-shadow:none !important; }
+.mon-head { background:var(--pk-surface) !important; color:var(--pk-ink) !important; border:1px solid var(--pk-line) !important; border-radius:6px 6px 0 0 !important;
+  box-shadow:none !important; padding:10px 16px !important; }
+.mon-head, .mon-head * { color:var(--pk-ink) !important; }
+.mon-head .t { font:700 12.5px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; }
+.mon-head > :not(.t):not(button) { font:600 11px var(--pk-mono) !important; color:var(--pk-ink-3) !important; letter-spacing:.04em; }
+.mon-head button, #aboutBtn { background:var(--pk-bg) !important; border:1px solid var(--pk-line) !important; border-radius:4px !important; font:600 11px var(--pk-mono) !important; color:var(--pk-ink) !important; }
+#fbar.fbar { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-top:0 !important; border-radius:0 0 6px 6px !important; box-shadow:none !important; }
+#fbar .fg { background:var(--pk-bg) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important; box-shadow:none !important; padding:4px 6px !important; }
+#fbar .fg > .small:first-child, #fbar .fg > b:first-child, #fbar .fg label { font:600 10.5px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink-3) !important; }
+#fbar select { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-radius:4px !important; font:600 12px var(--pk-mono) !important; color:var(--pk-ink) !important; }
+.chipb { border-radius:4px !important; font:600 12px var(--pk-mono) !important; padding:2px 10px !important; background:transparent !important;
+  border:1px solid transparent !important; box-shadow:none !important; }
+.chipb:hover { background:var(--pk-surface-2) !important; }
+.chipb.on, .chipb[aria-pressed="true"], .chipb.active, .chipb.sel { background:var(--pk-active) !important; color:var(--pk-active-ink) !important; border-color:var(--pk-active) !important; }
+.chipb:not(.all)::before { content:""; display:inline-block; width:6px; height:6px; border-radius:50%; background:currentColor; margin-right:6px; vertical-align:1px; }
+
+/* ---------------- section tabs: icon-less underline tabs ---------------- */
+nav.toc.dnav { background:var(--pk-bg) !important; border:0 !important; border-bottom:1px solid var(--pk-line) !important; border-radius:0 !important; box-shadow:none !important; }
+nav.toc.dnav a { background:transparent !important; color:var(--pk-ink-2) !important; border-radius:0 !important; border-bottom:2px solid transparent !important;
+  font:600 13px var(--pk-sans) !important; padding:12px 14px !important; box-shadow:none !important; }
+nav.toc.dnav a:hover { color:var(--pk-ink) !important; }
+nav.toc.dnav a.on, nav.toc.dnav a.active, nav.toc.dnav a[aria-current] { color:var(--pk-ink) !important; border-bottom-color:var(--pk-ink) !important; background:transparent !important; }
+nav.toc.dnav a .n, nav.toc.dnav a span:first-child { font-family:var(--pk-mono) !important; color:var(--pk-ink-3) !important; }
+.cp-trigger { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important; font:600 12px var(--pk-sans) !important; }
+
+/* ---------------- section headings ---------------- */
+.vhead h2.tn-h, h2.tn-h, section.view h2 { font:700 16px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink) !important; }
+.sec-period { font:600 11px var(--pk-mono) !important; background:var(--pk-surface-2) !important; border:1px solid var(--pk-line-2) !important; border-radius:4px !important;
+  color:var(--pk-ink) !important; padding:3px 8px !important; }
+.ask-sec { background:var(--pk-surface) !important; border-radius:6px !important; }
+section.view h3, .ov-h h3, .chart-title, .part-label { font-family:var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; font-size:13px !important; font-weight:700 !important; color:var(--pk-ink) !important; }
+
+/* strips: one thing / colour key / verified sources */
+.onestrip { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important; box-shadow:none !important; }
+.onestrip .k, .onestrip b.k { font:700 11px var(--pk-mono) !important; color:var(--pk-good) !important; letter-spacing:.06em; }
+.ckey { background:transparent !important; border:1px solid var(--pk-line) !important; border-style:solid !important; border-radius:6px !important; }
+.ckey-h, .ov-strip-h { font:700 10.5px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.08em; color:var(--pk-ink-3) !important; }
+.ov-strip { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important; box-shadow:none !important; }
+.ov-src { border-radius:4px !important; background:var(--pk-bg) !important; border:1px solid var(--pk-line) !important; font:500 12px var(--pk-sans) !important; padding:4px 10px !important; }
+.ov-src b { font:700 11.5px var(--pk-mono) !important; }
+.ov-link, .ov-go, .ov-insp { font:600 11.5px var(--pk-mono) !important; color:var(--pk-link) !important; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ---------------- cards ---------------- */
+.card, .panel, section.view .tbl-wrap, .cogrid > *, .insight, .ov-card, .op-box, .stat, .kpi, .tile {
+  border-radius:6px !important; box-shadow:none !important; border:1px solid var(--pk-line) !important; background:var(--pk-surface) !important; }
+.ov-card h4, .card h4, .insight h4 { font:700 14.5px var(--pk-sans) !important; color:var(--pk-ink) !important; letter-spacing:-.01em; }
+.ov-ev, .card p, .insight p { color:var(--pk-ink-2) !important; }
+.ov-tag, .tag { font:700 10px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.04em; border-radius:2px !important; padding:2px 6px !important;
+  background:var(--pk-tag) !important; border:1px solid var(--pk-tag-b) !important; color:var(--pk-tag-ink) !important; }
+.ov-str { font:700 10px var(--pk-mono) !important; border-radius:2px !important; padding:2px 6px !important; border:1px solid var(--pk-line) !important; }
+.ov-high { background:var(--pk-hi) !important; border-color:var(--pk-hi-b) !important; color:var(--pk-hi-ink) !important; }
+.ov-rec { background:var(--pk-rec) !important; border:1px solid var(--pk-rec-b) !important; border-radius:4px !important; font:500 12px/1.55 var(--pk-mono) !important; color:var(--pk-rec-ink) !important; }
+.ov-rec span { font:700 10px var(--pk-mono) !important; color:var(--pk-rec-ink) !important; opacity:.8; letter-spacing:.06em; }
+.ov-foot { border-top:1px solid var(--pk-line) !important; }
+
+/* confidence / fact tags */
+.conf { border-radius:4px !important; font:600 10.5px var(--pk-mono) !important; }
+
+/* ---------------- tables ---------------- */
+table th { font:700 10.5px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink-3) !important; background:transparent !important;
+  border-bottom:1px solid var(--pk-line) !important; }
+table td { border-color:var(--pk-line) !important; }
+table tr:hover td { background:var(--pk-surface-2); }
+
+/* ---------------- floating Ask Intelligence: black pill ---------------- */
+button.fab { background:var(--pk-active) !important; color:var(--pk-active-ink) !important; border:1px solid var(--pk-active) !important; border-radius:999px !important;
+  box-shadow:0 4px 14px rgba(0,0,0,.18) !important; padding:10px 18px !important; font:600 13px var(--pk-sans) !important; }
+button.fab .lbl { color:inherit !important; font:inherit !important; }
+button.fab svg, button.fab .ico { background:transparent !important; color:inherit !important; box-shadow:none !important; }
+
+/* links and inline badges stay readable on the grey canvas */
+a { color:var(--pk-link); }
+
+/* refinements after first render */
+.ov-rec > span:first-child, .ov-rec > span:first-child * { color:var(--pk-rec-ink) !important; background:transparent !important; }
+html.topnav body nav.toc.dnav, html body nav.toc.dnav { background:var(--pk-bg) !important; backdrop-filter:none !important; }
+nav.toc.dnav a::before { color:var(--pk-ink-3) !important; font-family:var(--pk-mono) !important; }
+nav.toc.dnav a.on::before, nav.toc.dnav a.active::before { color:var(--pk-ink) !important; }
+
+/* key-insight cards and section numbers: neutral, like Pritesh's insight cards */
+.secno { color:var(--pk-ink-3) !important; font-family:var(--pk-mono) !important; }
+.insight, .insight.mc { background:var(--pk-surface) !important; background-image:none !important; border:1px solid var(--pk-line) !important;
+  border-left:3px solid var(--pk-ink) !important; border-radius:6px !important; box-shadow:none !important; color:var(--pk-ink) !important; }
+.insight *:not(.bp):not(.bp *):not(a):not(.mc-tag) { border-color:var(--pk-line); }
+.mc-tag { font:700 10.5px var(--pk-mono) !important; letter-spacing:.06em; color:var(--pk-ink) !important; }
+.insight h3, .insight .mc-h, .insight b, .insight strong { color:var(--pk-ink) !important; }
+.bp { border-radius:4px !important; font:600 11.5px var(--pk-sans) !important; padding:1px 8px !important; }
+
+html body section.view .insight, html body section.view .insight.mc, html[data-theme] body section.view .insight.mc {
+  background:var(--pk-surface) !important; background-image:none !important; border:1px solid var(--pk-line) !important; border-left:3px solid var(--pk-ink) !important; box-shadow:none !important; }
+
+/* "Visual analytics" heading above the charts moved to the top of each section */
+.ct-h { display:flex; align-items:center; gap:8px; margin:22px 0 12px !important; font:700 13px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink) !important; }
+.ct-h::before { content:""; width:12px; height:12px; flex:0 0 12px; background:
+  linear-gradient(var(--pk-link),var(--pk-link)) 1px 6px/2px 6px no-repeat, linear-gradient(var(--pk-link),var(--pk-link)) 5px 2px/2px 10px no-repeat,
+  linear-gradient(var(--pk-link),var(--pk-link)) 9px 4px/2px 8px no-repeat; }
+.ct-moved + .ct-moved { margin-top:12px; }
+
+/* charts at the top: keep them at a readable size (wide cards were stretching 560px charts to 2.4x) */
+svg[viewBox]#erMonth, svg[viewBox]#dpTrend, #erMonth svg[viewBox], #dpTrend svg[viewBox] {
+  max-width:760px !important; height:auto !important; display:block; margin:0 auto; }
+
+/* Brand & campaigns: line chart + median bar chart in one row; posts list full width below */
+.ct-pair { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:18px; align-items:start; }
+.ct-col > .card { margin-top:0 !important; }
+.ct-pair #erMonth svg[viewBox] { max-width:100% !important; width:100% !important; margin:0; }
+.ct-pair #likes svg[viewBox], #likes svg[viewBox] { max-width:560px !important; height:auto !important; }
+.grid.ct-single { grid-template-columns:1fr !important; }
+@media (max-width:1000px) { .ct-pair { grid-template-columns:1fr; } .ct-col-r { padding-top:0 !important; } }
+
+/* structured paired panels (Brand & campaigns): same header, equal height, charts fill the panel */
+.ct-pair { grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) !important; align-items:stretch !important; }
+.ct-pair .ct-col { display:flex; flex-direction:column; padding-top:0 !important; }
+.ct-pair .ct-panel { flex:1; display:flex; flex-direction:column; padding:18px 20px 16px !important; margin:0 !important; }
+.ct-card-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--pk-line); }
+.ct-card-head .ct-card-title, .ct-card-head .chart-title { flex:1 1 100%; margin:0 !important; font:700 12.5px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink) !important; }
+.ct-card-head > .small.muted, .ct-card-head > p { flex:1 1 100%; margin:0 !important; font-size:12.5px !important; color:var(--pk-ink-2) !important; }
+.ct-card-head .pd-more { margin:0 !important; padding:0 !important; font:600 12px var(--pk-sans) !important; }
+.ct-pair #erMonth { width:100% !important; max-width:none !important; }
+.ct-pair #erMonth svg[viewBox] { width:100% !important; max-width:none !important; }
+.ct-panel-bars #likes { flex:1; display:flex; align-items:center; }
+.ct-panel-bars #likes svg[viewBox] { width:100% !important; max-width:620px !important; margin:0 auto !important; }
+.ct-pair .legend { margin-top:10px !important; padding-top:10px; border-top:1px solid var(--pk-line); }
+
+/* right column = bars (natural height) + posts list filling the rest; the list scrolls inside its panel */
+.ct-pair .ct-col-r { gap:18px; }
+.ct-pair .ct-panel-bars { flex:0 0 auto !important; }
+.ct-panel-bars #likes { flex:0 0 auto !important; display:block !important; }
+.ct-pair .ct-panel-posts { flex:1 1 0 !important; min-height:220px; overflow:hidden; }
+.ct-pair .ct-panel-posts > :not(.ct-card-head) { overflow:auto; }
+.ct-pair .ct-panel-posts ul, .ct-pair .ct-panel-posts ol, .ct-pair .ct-panel-posts .tp-list, .ct-pair .ct-panel-posts #topPosts { overflow:auto; max-height:100%; flex:1 1 0; min-height:0; }
+.ct-pair .ct-panel-posts { display:flex; flex-direction:column; }
+
+.ct-pair .ct-panel-posts ol { min-height:260px; }
+.ct-pair .ct-col:first-child .ct-panel { display:flex; flex-direction:column; }
+.ct-pair .ct-col:first-child #erMonth { flex:1 1 auto; display:flex; align-items:center; }
+.ct-pair .ct-col:first-child .legend { margin-top:auto !important; }
+
+.ct-pair .ct-panel-posts { min-height:390px !important; }
+
+/* final: two equal panels, same-size charts, no empty space (22 Nov 2026) */
+.ct-pair { grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; align-items:stretch !important; }
+.ct-pair .ct-panel-bars { flex:1 1 auto !important; }
+.ct-pair .ct-panel-bars #likes, .ct-pair .ct-col:first-child #erMonth { flex:1 1 auto !important; display:flex !important; align-items:center !important; }
+.ct-pair #erMonth svg[viewBox], .ct-pair #likes svg[viewBox] { width:100% !important; max-width:none !important; height:auto !important; margin:0 !important; }
+.grid.ct-single { margin-top:18px; }
+
+/* side-by-side compact tables (Brand & campaigns: emotional positioning | calls to action) */
+.ct-tpair { margin:18px 0; }
+.ct-tpanel .tbl-wrap { border:0 !important; background:transparent !important; margin:0 !important; padding:0 !important; overflow-x:auto; flex:1; }
+.ct-tpanel table { width:100%; font-size:12.5px !important; }
+.ct-tpanel table th { font-size:9.5px !important; letter-spacing:.04em !important; padding:6px 6px !important; white-space:normal !important; line-height:1.3; vertical-align:bottom; }
+.ct-tpanel table td { padding:7px 6px !important; font-size:12.5px !important; }
+.ct-tpanel table td .bp, .ct-tpanel table td [class*="bp-"] { font-size:11px !important; padding:1px 6px !important; }
+
+/* Social, ads & search: search chart | ads-by-month table, equal panels */
+.ct-spair #dpTrend { width:100% !important; max-width:none !important; flex:1 1 auto; display:flex; align-items:center; }
+.ct-spair #dpTrend svg[viewBox], .ct-spair svg[viewBox]#dpTrend { width:100% !important; max-width:none !important; height:auto !important; margin:0 !important; }
+.ct-spair .ct-toggle { flex:0 0 auto; margin:0 !important; }
+.ct-spair .ct-toggle button { font:600 11px var(--pk-mono) !important; padding:3px 8px !important; border-radius:4px !important; }
+.ct-spair .ct-tpanel table { width:100%; font-size:12.5px !important; }
+.ct-spair .ct-tpanel table th { font-size:9.5px !important; padding:6px 5px !important; white-space:normal !important; }
+.ct-spair .ct-tpanel table td { padding:7px 5px !important; font-size:12.5px !important; }
+.ct-pair-one { grid-template-columns:1fr !important; }
+
+/* ads panel: table stretches to the panel height (no free margin beside the search chart) */
+.ct-spair .ct-panel { display:flex; flex-direction:column; }
+.ct-spair #dpAds { flex:1 1 auto; display:flex; flex-direction:column; }
+.ct-spair #dpAds > .tbl-wrap, .ct-spair #dpAds > div { flex:1 1 auto; display:flex; }
+.ct-spair #dpAds table { height:100%; }
+.ct-spair #dpAds table td, .ct-spair #dpAds table th { vertical-align:middle; }
+
+/* Tai Po fire table in a half-width panel: post links flow inline instead of one per line */
+table.ct-fire td:last-child br { display:none; }
+table.ct-fire td:last-child a { display:inline; white-space:nowrap; margin-right:8px; font-size:11.5px; }
+table.ct-fire td { line-height:1.45 !important; }
+table.ct-fire td:nth-child(3) { min-width:200px; }
+.ct-tpanel table.ct-fire th:last-child, .ct-tpanel table.ct-fire td:last-child { min-width:150px; }
+
+/* What works | Tai Po fire: a little more room for the wide table; its rows stretch to the panel height */
+.ct-fire-pair { grid-template-columns:minmax(0,1.22fr) minmax(0,1fr) !important; }
+.ct-fire-pair .ct-tpanel { display:flex; flex-direction:column; }
+.ct-fire-pair .ct-col:first-child .tbl-wrap { flex:1 1 auto; display:flex; }
+.ct-fire-pair .ct-col:first-child table { height:100%; }
+.ct-fire-pair .ct-col:first-child table th, .ct-fire-pair .ct-col:first-child table td { padding:6px 4px !important; font-size:12px !important; vertical-align:middle; }
+.ct-fire-pair .ct-col:first-child table th { font-size:9px !important; }
+.ct-fire-pair .ct-col:first-child table td .bp { font-size:10.5px !important; padding:1px 5px !important; }
+</style>

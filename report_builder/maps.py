@@ -50,7 +50,7 @@ def build():
     def plain(note):
         """Keep caveats a reader needs; drop collection details (URLs, blocked sites, archive copies)."""
         keep = [s.strip() for s in re.split(r"(?<=[.;])\s+", note or "") if s.strip()
-                and not re.search(r"https?://|403|bots?\b|wayback|archive|original url|ticketing|scrap", s, re.I)]
+                and not re.search(r"https?://|403|bots?\b|wayback|archive|original url|ticketing|scrap|[\u3400-\u9fff]", s, re.I)]
         return " ".join(keep)
     official = [{**o, "note": plain(o.get("note"))} for o in on.get("official_locations", []) if o.get("source_url")]
     news = sorted([{**n, "note": plain(n.get("note"))} for n in on.get("location_news", [])

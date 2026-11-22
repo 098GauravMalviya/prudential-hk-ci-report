@@ -3,6 +3,8 @@
 Engagement rate (follower-based, brief v3 s4 M2), one definition per platform, never mixed:
   Facebook  = (reactions + shares) / page followers x 100      (comment counts are missing on most posts in the export, so not used)
   Instagram = (likes + comments) / account followers x 100     (Instagram does not expose shares; posts with hidden likes are excluded)
+  Threads   = (likes + replies + reposts + quotes) / account followers x 100   (added 17 Nov 2026; Prudential and AIA have accounts,
+              AIA's last post was 30 Jul 2025, so only Prudential has posts in the period; AXA and Manulife have no Threads account)
 Followers are the counts shown at capture (11 Nov 2026). Only posts owned by the brand account, dated 1 Nov 2025 - 31 Oct 2026.
 """
 import json
@@ -28,7 +30,7 @@ def _themes():
 def load():
     themes = _themes()
     tag = lambda text: [k for k, pats in themes.items() if any(p.search(text.lower()) for p in pats)]
-    posts, followers = [], {"Facebook": {}, "Instagram": {}}
+    posts, followers = [], {"Facebook": {}, "Instagram": {}, "Threads": {}}
     for x in json.loads((RAW / "fb_pages.json").read_text(encoding="utf-8")):
         b = FB_PAGE.get(str(x.get("pageUrl", "")).rstrip("/").split("/")[-1])
         if b and x.get("followers"):
@@ -61,8 +63,27 @@ def load():
                       "format": {"Sidecar": "Carousel"}.get(x.get("type"), x.get("type") or "Post"),
                       "reactions": likes if likes is not None and likes >= 0 else None, "comments": com, "shares": None,
                       "views": x.get("videoViewCount"), "er": round((likes + com) / f * 100, 3) if ok else None, "themes": tag(text)})
+    # Threads: account usernames are the Instagram ones; profiles checked for all four brands (threads_profiles.json)
+    if (RAW / "threads_profiles.json").exists():
+        for x in json.loads((RAW / "threads_profiles.json").read_text(encoding="utf-8")):
+            b = IG_USER.get(str(x.get("username") or "").lower())
+            if b and x.get("follower_count"):
+                followers["Threads"][b] = int(x["follower_count"])
+    for x in [y for f in ("threads_posts_pru.json", "threads_posts.json") if (RAW / f).exists() for y in json.loads((RAW / f).read_text(encoding="utf-8"))]:
+        b = IG_USER.get(str(x.get("username") or "").lower())
+        date = str(x.get("created_at") or "")[:10]
+        if not b or not (WIN[0] <= date <= WIN[1]) or str(x.get("is_repost")) == "True" or str(x.get("is_reply")) == "True":
+            continue
+        text = re.sub(r"\s+", " ", str(x.get("text_content") or "")).strip()
+        n = lambda k: int(float(x.get(k) or 0))
+        f = followers["Threads"].get(b)
+        likes, rep, rp, qt = n("like_count"), n("reply_count"), n("repost_count"), n("quote_count")
+        posts.append({"platform": "Threads", "brand": b, "date": date, "url": x.get("post_url"), "text": text,
+                      "format": {"video": "Video", "image": "Image", "photo": "Image", "carousel": "Carousel"}.get(str(x.get("media_type") or "").lower(), "Text"),
+                      "reactions": likes, "comments": rep, "shares": rp + qt, "views": n("view_count") if str(x.get("view_count_status")) == "available" else None,
+                      "er": round((likes + rep + rp + qt) / f * 100, 3) if f else None, "themes": tag(text)})
     stats = {"followers": followers, "brand": defaultdict(dict)}
-    for plat in ("Facebook", "Instagram"):
+    for plat in ("Facebook", "Instagram", "Threads"):
         for b in ("Prudential", "AIA", "Manulife", "AXA"):
             mine = [p for p in posts if p["platform"] == plat and p["brand"] == b]
             if not mine:

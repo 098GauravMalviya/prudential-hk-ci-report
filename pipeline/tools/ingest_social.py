@@ -23,10 +23,11 @@ import social_meta as sm  # noqa: E402
 
 CID = {"Prudential": "PRU_HK", "AIA": "AIA_HK", "Manulife": "MFC_HK", "AXA": "AXA_HK"}
 CAP = {"Facebook": "2026-11-11T05:40:00+00:00", "Instagram": "2026-11-11T05:40:00+00:00", "LinkedIn": "2026-11-11T06:23:48+00:00",
-       "meta_ads": "2026-11-11T07:10:00+00:00"}
+       "meta_ads": "2026-11-11T07:10:00+00:00", "Threads": "2026-11-17T04:31:00+00:00"}
 DEF = {"Facebook": "follower-based: (reactions + shares) / page followers at capture x 100; comments not used (missing on most posts)",
        "Instagram": "follower-based: (likes + comments) / account followers at capture x 100; shares not exposed",
-       "LinkedIn": "follower-based: (reactions + comments + reposts) / company followers at capture x 100"}
+       "LinkedIn": "follower-based: (reactions + comments + reposts) / company followers at capture x 100",
+       "Threads": "follower-based: (likes + replies + reposts + quotes) / account followers at capture x 100"}
 CJK = re.compile(r"[一-鿿]")
 TR = json.loads((PRU / "_report_work" / "translations.json").read_text(encoding="utf-8")) if (PRU / "_report_work" / "translations.json").exists() else {}
 rid = lambda pre, s: f"{pre}-{hashlib.sha1(s.encode()).hexdigest()[:12]}"
@@ -38,7 +39,7 @@ def main():
     for t in ("observation_metrics", "observation_tags", "observation_modules"):
         x(f"delete from {t} where record_id like 'SOC-%' or record_id like 'ADM-%'")
     x("delete from observations where record_id like 'SOC-%' or record_id like 'ADM-%'")
-    x("delete from fact_metrics where platform in ('facebook','instagram','linkedin_export','meta_ads')")
+    x("delete from fact_metrics where platform in ('facebook','instagram','linkedin_export','meta_ads','threads')")
 
     posts, mst = sm.load()
     lip, lst = li.load()
@@ -46,7 +47,7 @@ def main():
     for p in lip:
         rows.append({"platform_label": "LinkedIn", "brand": p["brand"], "date": p["date"], "url": p["url"], "text": p["text"], "format": p["format"],
                      "reactions": p["likes"], "comments": p["comments"], "shares": p["shares"], "er": p["er"], "themes": p["themes"]})
-    fol = {"Facebook": mst["followers"]["Facebook"], "Instagram": mst["followers"]["Instagram"], "LinkedIn": lst["followers"]}
+    fol = {"Facebook": mst["followers"]["Facebook"], "Instagram": mst["followers"]["Instagram"], "LinkedIn": lst["followers"], "Threads": mst["followers"].get("Threads", {})}
     agg = defaultdict(list)
     n = 0
     for p in rows:
@@ -127,7 +128,9 @@ def main():
                  ("LinkedIn company page (full-year export)", "linkedin_export", "collected", cnt(cid, "linkedin"), f"Brand-authored posts; followers {fol['LinkedIn'].get(b)} at capture"),
                  ("Meta Ad Library (Hong Kong)", "meta_ads", "collected", x("select count(*) from observations where company_id=? and platform='meta_ads'", (cid,)).fetchone()[0],
                   "Ads running on 11 Nov 2026; the Hong Kong library lists only active ads, so ended ads are not available; spend not disclosed"),
-                 ("Threads", "threads", "profile recorded" if b == "AIA" else "no official account", 0, "AIA profile listed on its official-platforms page; posts not collected" if b == "AIA" else "None listed on the insurer's official-platforms page"),
+                 ("Official Threads account", "threads", ("collected" if cnt(cid, "threads") else "account inactive in the period") if b in fol["Threads"] else "no official account", cnt(cid, "threads"),
+                  {"Prudential": f"Posts 1 Nov 2025 - 31 Oct 2026 (replies and reposts left out); followers {fol['Threads'].get(b)} at capture (17 Nov 2026)",
+                   "AIA": f"Account found (followers {fol['Threads'].get(b)}), but its last post was 30 Jul 2025: no posts in the period"}.get(b, "No Threads account (checked 17 Nov 2026)")),
                  ("Xiaohongshu", "xiaohongshu", "no official account" if b == "Manulife" else "account found - login needed", 0, "Collection needs a logged-in session; not yet run"),
                  ("WeChat", "wechat", "content not public", 0, "Official account content is not publicly accessible"),
                  ("TikTok", "tiktok", "not applicable", 0, "TikTok does not operate in Hong Kong")]

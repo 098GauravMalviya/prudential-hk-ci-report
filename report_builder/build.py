@@ -41,6 +41,37 @@ def clean_title(t):
     t = re.sub(r"\b(20\d\d)-(\d\d)-(\d\d)\b", lambda m: f"{int(m[3])} {_MON[int(m[2]) - 1]} {m[1]}", t)
     return re.sub(r"\s+", " ", t).strip()
 
+
+# English names for Chinese-language outlets (the page is English only; the original title stays in the hover note)
+OUTLET_EN = {
+    "香港經濟日報HKET": "Hong Kong Economic Times", "經濟日報": "Hong Kong Economic Times", "香港01": "HK01", "星島頭條": "Sing Tao Headline",
+    "信報網站": "Hong Kong Economic Journal", "on.cc東網": "on.cc", "明報財經網": "Ming Pao Finance", "明報新聞網": "Ming Pao",
+    "大公文匯網": "Ta Kung Wen Wei Po", "Yahoo 財經": "Yahoo Finance Hong Kong", "Yahoo新聞": "Yahoo News Hong Kong",
+    "香港電台新聞網": "RTHK News", "Now 新聞": "Now News", "Now 財經": "Now Finance", "香港財經時報HKBT": "Hong Kong Business Times",
+    "經濟一週": "Economic Digest", "巴士的報": "Bastille Post", "香港商报": "Hong Kong Commercial Daily", "東方日報": "Oriental Daily News",
+    "Capital 資本平台": "Capital", "BigGo 財經": "BigGo Finance", "橙新聞": "Orange News", "富途牛牛": "Futu", "Oh!爸媽": "Oh!Mama",
+    "遠見雜誌": "Global Views Monthly", "追光者 Pulse HK News": "Pulse HK News", "超訊 Supermedia": "Supermedia", "UHK 港生活": "UHK",
+    "成報": "Sing Pao", "CMoney投資網誌": "CMoney", "胡润百富榜": "Hurun Report", "Fitz 運動平台": "Fitz", "香港賽馬會": "Hong Kong Jockey Club",
+    "台視新聞網": "TTV News", "Sing Tao Daily 星島日報加拿大": "Sing Tao Daily (Canada)", "大紀元時報香港": "The Epoch Times Hong Kong",
+    "紫荊網": "Bauhinia", "經濟導報": "Economic Herald", "地產站": "Property news site", "新假期": "Weekend Weekly magazine",
+    "新華澳報": "Macau newspaper", "澳門商報": "Macau newspaper", "大衆報": "Macau newspaper",
+}
+_CJK = re.compile(r"[\u3000-\u9fff\uff00-\uffef]+")
+
+
+def outlet_en(src):
+    if not src:
+        return src
+    s = src.strip().rstrip("*").strip()
+    if s in OUTLET_EN:
+        return OUTLET_EN[s]
+    if s.startswith("Investing.com 香港"):
+        return "Investing.com Hong Kong"
+    if _CJK.search(s):
+        rest = re.sub(r"\s+", " ", _CJK.sub(" ", s)).strip(" -|·")
+        return rest if len(rest) >= 3 else "Chinese-language outlet"
+    return src
+
 M1_TYPES = ("announcement", "news_article", "content_article")
 # Records that matched a brand name but are about another company or market (checked 11 Nov 2026).
 NOT_HK = """ and o.title not like '%Prudential Financial%' and o.title not like '%Tata AIA%'
@@ -99,9 +130,11 @@ stats["mpf"] = {"rows": [{"period": pe, "metric": m, "value": v, "unit": un, "pa
 stats["youtube"] = {}
 for cid, b in BRANDS.items():
     ch = q("select channel_title, url, followers from channel_context where company_id=? and platform='youtube'", cid)
-    vids = q(f"""select o.title, o.source_url, o.publication_date, (select value from observation_metrics m where m.record_id=o.record_id and metric='views')
+    _tr = json.loads((PRU / "_report_work" / "translations.json").read_text(encoding="utf-8")) if (PRU / "_report_work" / "translations.json").exists() else {}
+    vids = [(re.sub(r"\s*[（(\[「【][^)）\]」】]*[㐀-鿿][^)）\]」】]*[)）\]」】]", "", (_tr.get(rid) or {}).get("en") or t), u, d, v) for rid, t, u, d, v in q(
+             f"""select o.record_id, o.title, o.source_url, o.publication_date, (select value from observation_metrics m where m.record_id=o.record_id and metric='views')
                  from observations o where o.company_id=? and o.platform='youtube' and o.source_name like '%official%'
-                 and o.publication_date between '{WIN[0]}' and '{WIN[1]}'""", cid)
+                 and o.publication_date between '{WIN[0]}' and '{WIN[1]}'""", cid)]   # English titles for Chinese videos
     views = [v for *_, v in vids if v is not None]
     top = sorted(vids, key=lambda r: -(r[3] or 0))[:3]
     stats["youtube"][b] = {"videos": len(vids), "views": int(sum(views)), "median_views": int(st.median(views)) if views else None,
@@ -166,6 +199,7 @@ for (rid, cid, rtype, atype, title, pub, url, src, scat, lang, prim, rel) in q(f
     if url and url.startswith("javascript"):
         url = ""
     src = "LinkedIn" if rtype == "social_post" else re.sub(r"\s*\(via .*?\)", "", src or "")
+    src = outlet_en(src)
     if lang == "zh" and (TR_DB.get(rid) or {}).get("en"):
         en_sum[rid] = TR_DB[rid]["en"]
     evid.append([rid, int(pub.replace("-", "")), BRANDS[cid], rtype, atype, mods, cats, ths, CHANNEL.get(scat, "Media"),
@@ -217,13 +251,142 @@ for rid, cid, title, url, pub in q(f"""select record_id, company_id, title, sour
     v = q("select value from observation_metrics where record_id=? and metric='views'", rid)
     evid.append([rid, int(pub.replace("-", "")), BRANDS[cid], "video", "", "M2", [], [], "YouTube",
                  re.sub(r"\s+", " ", title or "")[:180], url or "", "YouTube", v[0][0] if v else None])
+_CJK_T = re.compile(r"[㐀-鿿]")
 for row in evid:
-    if row[0] not in en_sum and row[9].endswith("*") and (TR_DB.get(row[10]) or {}).get("en"):
-        en_sum[row[0]] = TR_DB[row[10]]["en"]
+    # Chinese titles never flagged as Chinese (e.g. videos): flag them and use their English translation
+    if not row[9].endswith("*") and _CJK_T.search(row[9]) and ((TR_DB.get(row[0]) or {}).get("en") or (TR_DB.get(row[10]) or {}).get("en")):
+        row[9] += "*"
+    if row[0] not in en_sum and row[9].endswith("*"):
+        en = (TR_DB.get(row[0]) or {}).get("en") or (TR_DB.get(row[10]) or {}).get("en")
+        if en:
+            en_sum[row[0]] = en
+# English only on the page: drop Chinese names in brackets inside English summaries ("Tennis Open 2026 (保誠香港網球公開賽2026)")
+_NOZH = re.compile(r"\s*[（(\[「【][^()（）\[\]「」【】]*[㐀-鿿][^()（）\[\]「」【】]*[)）\]」】]")
+_CJK_RUN = re.compile(r"\s*[（(\[「【]?[㐀-鿿「」【】，、：]+[)）\]」】]?")
+
+
+def nozh(v):
+    """English text only: remove Chinese names in (nested) brackets, then any leftover Chinese runs."""
+    p = None
+    while p != v:
+        p, v = v, _NOZH.sub("", v)
+    return re.sub(r"\s{2,}", " ", _CJK_RUN.sub("", v)).strip()
+
+
+en_sum = {k: nozh(v) for k, v in en_sum.items()}
 stats_js += "const EN_SUM = " + json.dumps(en_sum, ensure_ascii=False, separators=(",", ":")) + ";\n"
 stats_js += "const EVID = " + json.dumps(evid, ensure_ascii=False, separators=(",", ":")) + ";\n"
+# Emotional positioning and calls to action of each post and ad. Rule-based on the full text (English and Chinese keyword lists below,
+# shown on the dashboard); a record can carry several narratives. Ads use the ad's own button; posts use call-to-action wording in the text.
+NARR_RX = {
+    "family": re.compile(r"famil|loved ones?|your child|children|\bkids?\b|parents?\b|promise|家人|家庭|摯愛|親人|子女|父母|孩子|承諾", re.I),
+    "health": re.compile(r"health|wellness|well-being|wellbeing|longevity|ageing|aging|fitness|marathon|\brun\b|mental|cancer|critical illness|medical|"
+                         r"健康|長壽|樂齡|運動|身心|跑步|醫療|癌|危疾|疾病", re.I),
+    "wealth": re.compile(r"wealth|saving|retire|\bMPF\b|annuit|invest|financial (freedom|independence|goals?|planning)|passive income|"
+                         r"財富|儲蓄|退休|強積金|年金|理財|投資|收息|增值|財務自由", re.I),
+    "premium": re.compile(r"private (wealth|bank|client)|prestige|legacy|high[- ]net[- ]worth|\bHNW\b|\bAlta\b|premier|elite|succession|"
+                          r"尊尚|尊貴|傳承|私人財富|高淨值|尊享|顯赫", re.I),
+    "rewards": re.compile(r"lucky draw|giveaway|prize|\bwin\b|discount|rebate|voucher|coupon|promo code|"
+                          r"抽獎|獎賞|優惠|禮券|回贈|折扣|獎品|贏取", re.I),
+}
+CTA_BTN = {"Learn more": "explore", "See details": "explore", "Contact us": "adviser", "Apply now": "apply", "Get quote": "apply", "Sign up": "signup"}
+CTA_RX = [("apply", re.compile(r"get a quote|apply|buy now|purchase|enrol|投保|申請|報價|立即保障", re.I)),
+          ("adviser", re.compile(r"contact|consult|adviser|advisor|financial planner|consultant|whatsapp|call us|聯絡|查詢|顧問|預約|理財策劃", re.I)),
+          ("signup", re.compile(r"sign up|register|join us|lucky draw|登記|報名|參加|參與", re.I)),
+          ("app", re.compile(r"download|in the app|app store|下載|應用程式", re.I)),
+          ("explore", re.compile(r"learn more|find out|discover|visit|click|link in bio|了解更多|即睇|按此|詳情|立即了解", re.I))]
+narr = {}
+# Brand sign-off hashtags on almost every post are a signature, not the post's message: AIA #HealthierLongerBetterLives / #健康長久好生活, AXA #KnowYouCan
+SIGNOFF_RX = re.compile(r"#(HealthierLongerBetterLives|健康長久好生活|KnowYouCan)\.?", re.I)
+def _narr(rid, text, btn=None):
+    text = SIGNOFF_RX.sub(" ", text or "")
+    n = [k for k, rx in NARR_RX.items() if rx.search(text)]
+    c = CTA_BTN.get(btn) if btn else None
+    if not c:
+        c = next((k for k, rx in CTA_RX if rx.search(text)), None)
+    if n or c:
+        narr[rid] = [n, c, "button" if btn in CTA_BTN else "text"]
+for rid, txt, xtra in q("select record_id, coalesce(original_content, title), extra from observations where record_id like 'ADM-%'"):
+    _narr(rid, txt, (json.loads(xtra or "{}") or {}).get("cta"))
+for n, p_ in enumerate(LI_POSTS):
+    _narr(f"LI-{n}", p_["text"])
+for n, p_ in enumerate(META_POSTS):
+    _narr(f"{p_['platform'][:2].upper()}-{n}", p_["text"])
+stats_js += "const NARR = " + json.dumps(narr, ensure_ascii=False, separators=(",", ":")) + ";\n"
+print(f"narrative / call-to-action tags: {len(narr)}")
+# Named Hong Kong publications searched one by one (pipeline/collectors/hk_media_sites.py)
+_msf = PRU / "ci-monitor" / "data" / "raw" / "hk_media_sites_coverage.json"
+stats_js += "const MEDIA_SRC = " + (_msf.read_text(encoding="utf-8") if _msf.exists() else "[]") + ";\n"
+# Insurance Authority press releases, read in a browser on 17 Nov 2026 (the site blocks automated tools)
+_iapr = PRU / "_report_work" / "ia_press_releases.json"
+stats_js += "const IA_PR = " + (_iapr.read_text(encoding="utf-8") if _iapr.exists() else "null") + ";\n"
+# Where each ad's call-to-action button leads (Meta Ad Library, ads running on 11 Nov 2026), 17 Nov 2026.
+# fb.me = a form inside Facebook / Instagram (lead ad); insurer domains and their short links = own website or campaign page;
+# AXA's bit.ly links are click-tracking links that land on axa.com.hk (checked on a sample, 17 Nov 2026).
+_PAGE = {"191172447574636": "Prudential", "233237970068198": "AIA", "381309905353457": "AXA", "485081128298580": "Manulife"}
+_cta_dest = {}
+for _a in json.loads((PRU / "apify_raw" / "fb_ads.json").read_text(encoding="utf-8")):
+    _b = _PAGE.get(str(_a.get("pageId") or _a.get("pageID")))
+    if not _b:
+        continue
+    _s = _a.get("snapshot") or {}; _cards = _s.get("cards") or []
+    _u = (_s.get("linkUrl") or (_cards[0].get("linkUrl") if _cards else "") or "").lower()
+    _btn = _s.get("ctaText") or (_cards[0].get("ctaText") if _cards else None) or "No button"
+    _d = ("form" if "fb.me" in _u else "site" if re.search(r"aia\.com|axa\.com|manulife\.com|prudential\.com|pruhk\.co|bit\.ly", _u)
+          else "social" if re.search(r"instagram\.com|facebook\.com", _u) else "app" if re.search(r"apps\.apple|play\.google", _u)
+          else "chat" if re.search(r"wa\.me|whatsapp|m\.me", _u) else "none" if not _u else "other")
+    _x = _cta_dest.setdefault(_b, {"ads": 0, "dest": {}, "buttons": {}, "example": {}})
+    _x["ads"] += 1; _x["dest"][_d] = _x["dest"].get(_d, 0) + 1
+    _x["buttons"].setdefault(_d, {}); _x["buttons"][_d][_btn] = _x["buttons"][_d].get(_btn, 0) + 1
+    _x["example"].setdefault(_d, str(_a.get("adArchiveID") or _a.get("adArchiveId") or ""))
+stats_js += "const CTA_DEST = " + json.dumps(_cta_dest, ensure_ascii=False, separators=(",", ":")) + ";\n"
+stats["cta_destinations_meta_ads"] = {"note": "where each Facebook / Instagram ad's button leads (ads running on 11 Nov 2026): form = lead form inside Facebook / Instagram; site = the insurer's own website or campaign page", **_cta_dest}
+# Health and critical-illness products: official brochures and product pages (_report_work/health_ci_products.json)
+_hcf = PRU / "_report_work" / "health_ci_products.json"
+stats_js += "const HCI = " + (_hcf.read_text(encoding="utf-8") if _hcf.exists() else "{}") + ";\n"
 stats_js += "const INS_EVID = " + json.dumps([ins_ids[f"INS-0{i}"] for i in range(1, 6)]) + ";\n"
 print(f"dashboard evidence rows: {len(evid)}")
+
+# ---------- search logic (brief s6.1-6.3): the queries actually run, read back from the stored records ----------
+_QFAM = [("Google News: brand names (s6.1)", "Brand name, English and Hong Kong Traditional Chinese, searched month by month"),
+         ("Google News: brand + category or activity terms (s6.3)", "Brand name AND a group of product, theme or activity terms (s6.2), English and Traditional Chinese"),
+         ("Web search: brand + Hong Kong + category (s6.3)", "Brand + Hong Kong + one category or activity group (s6.2), English"),
+         ("YouTube search: brand + Hong Kong media (s6.3)", "Brand + interview, podcast or campaign 2026; only Hong Kong or regional media channels kept"),
+         ("Google News: named Hong Kong publications (s5.6)", "site: search of each named news, marketing and insurance publication for each brand, English and Chinese, quarter by quarter"),
+         ("Google News: campaign and health / critical-illness topics", "Brand + campaign name or ambassador; brand + critical illness, medical or cancer, English and Chinese"),
+         ("Google News: Hong Kong insurance discovery (s5.6)", "\"Hong Kong\" insurance + brand (English) and 香港 保險 + brand (Chinese), quarter by quarter; links validated against the publisher")]
+_qfam = {i: {"q": set(), "n": 0, "en": None, "zh": None} for i in range(len(_QFAM))}
+for (_x,) in q("select extra from observations where extra like '%query%'"):
+    try:
+        _e = json.loads(_x or "{}")
+    except Exception:
+        continue
+    _qq = _e.get("query") or _e.get("search_query")
+    if not _qq:
+        continue
+    _tool = str(_e.get("tool") or _e.get("collector") or _e.get("import") or "")
+    if _e.get("collector") == "hk_media_sites":
+        _i = 4 if _e.get("search_kind") == "publication" else 6 if _e.get("search_kind") == "discovery" else 5
+    elif _e.get("search_query"):
+        _i = 3
+    elif "exa" in _tool or "tavily" in _tool:
+        _i = 2
+    elif " OR " in _qq:
+        _i = 1
+    else:
+        _i = 0
+    _qq = re.sub(r"\s*after:\S+|\s*before:\S+", "", _qq).strip()
+    _f = _qfam[_i]
+    _f["q"].add(_qq)
+    _f["n"] += 1
+    _lang = "zh" if _cjk.search(_qq) else "en"
+    if not _f[_lang] or len(_qq) < len(_f[_lang]):
+        _f[_lang] = _qq
+SEARCHQ = [[_QFAM[i][0], _QFAM[i][1], len(_qfam[i]["q"]), _qfam[i]["n"], _qfam[i]["en"], _qfam[i]["zh"]] for i in range(len(_QFAM))]
+stats_js += "const SEARCHQ = " + json.dumps(SEARCHQ, ensure_ascii=False) + ";\n"
+# ---------- Insurance Authority: insurer-level market share (tools/ia_market_share.py, from the IA's own Excel files) ----------
+_iaf = PRU / "_report_work" / "ia_market_share.json"
+stats_js += "const IA_SHARE = " + (json.dumps(json.loads(_iaf.read_text(encoding="utf-8"))["periods"], ensure_ascii=False) if _iaf.exists() else "[]") + ";\n"
 
 # ---------- licensed company data: profile, workforce, technology detected, research-intent topics ----------
 import openpyxl
@@ -310,13 +473,30 @@ assert logos.count("<img") == 2, "logos not found in template"
 chat_start = tpl.index("<!-- Chat -->")
 script_start = tpl.index("\n<script>", chat_start)
 chat = tpl[chat_start:script_start]
-chat = re.sub(r"<h4>Ask anything about.*?</h4>", "<h4>Ask anything about Prudential and its Hong Kong competitors</h4>", chat, flags=re.S)
+chat = re.sub(r"<h4>Ask anything about.*?</h4>", "<h4>Ask Intelligence: Prudential and its Hong Kong competitors</h4>", chat, flags=re.S)
 chat = re.sub(r'(<div class="welcome" id="welcome">\s*<h4>.*?</h4>\s*)<p>.*?</p>',
-              r'\1<p>Answers come only from this report and its evidence: insurer newsrooms, results filings and transcripts, Hong Kong media coverage, app-store listings and reviews, and LinkedIn posts from 1 Nov 2025 to 31 Oct 2026. Answers link to their proof.</p>',
+              r'\1<p>Ask in plain English across the four modules and the evidence behind them: insurer newsrooms, results filings and transcripts, Hong Kong media, posts and ads, product brochures and app reviews, 1 Nov 2025 to 31 Oct 2026. Each answer gives the answer, what it means for Prudential, the evidence and metrics, how strong the evidence is, and the sources.</p>',
               chat, flags=re.S)
+chat = chat.replace("Ask the report", "Ask Intelligence")   # walkthrough 16 Nov 2026: assistant renamed
 chat = re.sub(r'placeholder="[^"]*"', 'placeholder="Ask about AIA, Manulife or AXA launches, campaigns, apps, results or what Prudential could do…"', chat)
 
 generic = tpl[tpl.index("/* ---------- Interactions"):]
+# Answers may carry one ```chart block (JSON): draw it as a simple labelled bar chart (walkthrough 16 Nov 2026: charts where useful)
+_md_old = "  markCompetitors(d);\n  return d.innerHTML;"
+assert _md_old in generic, "chat md() hook not found"
+generic = generic.replace(_md_old, """  d.querySelectorAll("pre > code.language-chart").forEach(c => {
+    try {
+      const j = JSON.parse(c.textContent), items = (j.items || []).filter(x => Array.isArray(x) && isFinite(+x[1])).slice(0, 8);
+      if (!items.length) return;
+      const mx = Math.max(...items.map(x => +x[1])) || 1, u = esc(String(j.unit || ""));
+      const fig = document.createElement("figure"); fig.className = "achart";
+      fig.innerHTML = (j.title ? `<figcaption>${esc(String(j.title))}</figcaption>` : "") + items.map(([l, v]) =>
+        `<div class="ab"><span class="al">${esc(String(l))}</span><span class="at"><i style="width:${Math.max(2, +v / mx * 100).toFixed(1)}%"></i></span><span class="av">${(+v).toLocaleString("en-GB")}${u}</span></div>`).join("");
+      c.parentElement.replaceWith(fig);
+    } catch (e) { /* not valid chart JSON: leave the code block as text */ }
+  });
+  markCompetitors(d);
+  return d.innerHTML;""")
 
 # Scroll handler: once per animation frame, ignore sections in hidden views, change classes only when the active link changes
 _old = generic[generic.index('addEventListener("scroll", () => {'):]
@@ -362,8 +542,41 @@ assert not re.search(r"Gemini|tokens|context window|stCache|ctxBar|stModel", gen
 
 body = (HERE / "body.html").read_text(encoding="utf-8").replace("{{LOGOS}}", logos)
 data = (HERE / "data.js").read_text(encoding="utf-8")
+# lead images of the news / newsroom articles (Prudential/ci-monitor/tools/news_images.py), keyed by evidence id
+_nidx = json.loads((HERE / "media" / "news_images.json").read_text(encoding="utf-8")) if (HERE / "media" / "news_images.json").exists() else {}
+# a picture that many articles share is the site's default logo/banner, not the article's own image: leave it out
+_nimg = Counter(v["img"] for v in _nidx.values() if v)
+_news = {k: "news_" + k.lower() + ".jpg" for k, v in _nidx.items() if v and v.get("ok", True) and _nimg[v["img"]] <= 2 and (HERE / "media" / v["file"]).exists()}
+# screenshots of the source page behind each move on the timeline board (Prudential/ci-monitor/tools/capture_moves.py)
+_mv = json.loads((HERE / "media" / "moves.json").read_text(encoding="utf-8")) if (HERE / "media" / "moves.json").exists() else {}
+_moves = {u: v["file"] for u, v in _mv.items() if v and u.startswith("https://") and "news.google." not in u and (HERE / "media" / "moves" / v["file"]).exists()}   # Google News pages are consent screens
+# (no picture merging: insurer newsroom pages share one template, so look-alike pages are different releases)
+data = "const MOVESHOT = " + json.dumps(_moves, ensure_ascii=False, separators=(",", ":")) + ";" + chr(10) + data
+# pictures for evidence rows: Google ad creatives, YouTube thumbnails, LinkedIn post images, app store pages (tools/evidence_images.py)
+_ei = json.loads((HERE / "media" / "evimg.json").read_text(encoding="utf-8")) if (HERE / "media" / "evimg.json").exists() else {}
+_evimg = {k: v for k, v in _ei.items() if v and (HERE / "media" / "evimg" / v).exists()}
+import cnsoc as _cn   # Xiaohongshu / WeChat conversation (search-based), 20 Nov 2026
+_CN_ROWS, _CN_ST, _CN_INS, _CN_KB = _cn.build()
+data = ("const CNSOC = " + json.dumps(_CN_ROWS, ensure_ascii=False, separators=(",", ":")) + ";" + chr(10)
+        + "const CNSOC_ST = " + json.dumps(_CN_ST, ensure_ascii=False, separators=(",", ":")) + ";" + chr(10)
+        + "const CNSOC_INS = " + json.dumps(_CN_INS, ensure_ascii=False) + ";" + chr(10)) + data
+data = "const EVIMGMAP = " + json.dumps(_evimg, separators=(",", ":")) + ";" + chr(10) + data
+data = ("const NEWSIMG = " + json.dumps(_news, separators=(",", ":")) + ";\n"
+        + "const MEDIA_BASE = location.protocol === 'file:' ? '../report_app/prudential/media/' : '/media/';\n") + data
 dash = (HERE / "dashboard.js").read_text(encoding="utf-8")
-html = "\n".join([head + "<body>", "", body, chat, "<script>", stats_js, data, dash, generic])
+# visual layer (Sahaj's walkthrough, 17 Nov 2026): source visuals, progressive disclosure, more white space
+_media = json.loads((HERE / "media" / "media.json").read_text(encoding="utf-8")) if (HERE / "media" / "media.json").exists() else []
+_media = [m for m in _media if (HERE / "media" / m["file"]).exists()]
+visual_js = "const MEDIA = " + json.dumps(_media, ensure_ascii=False, separators=(",", ":")) + ";\n" + (HERE / "visual.js").read_text(encoding="utf-8")
+visual_js += "\n" + (HERE / "overview.js").read_text(encoding="utf-8")          # InkTank-style executive overview (20 Nov 2026)
+# live browser captures of the evidence pages (Prudential/ci-monitor/tools/capture_sources.py) + Stitch design system
+_caps = json.loads((HERE / "media" / "captures.json").read_text(encoding="utf-8")) if (HERE / "media" / "captures.json").exists() else []
+_caps = [c for c in _caps if (HERE / "media" / c["file"]).exists()]
+visual_js += "\nconst CAPTURES = " + json.dumps(_caps, ensure_ascii=False, separators=(",", ":")) + ";\n" + (HERE / "captures.js").read_text(encoding="utf-8") + "\n" + (HERE / "explorer.js").read_text(encoding="utf-8") + "\n" + (HERE / "news.js").read_text(encoding="utf-8") + chr(10) + (HERE / "cardpics.js").read_text(encoding="utf-8") + chr(10) + (HERE / "sheet.js").read_text(encoding="utf-8") + chr(10) + (HERE / "highlight.js").read_text(encoding="utf-8") + chr(10) + (HERE / "cnsoc.js").read_text(encoding="utf-8") + chr(10) + (HERE / "geo.js").read_text(encoding="utf-8") + chr(10) + (HERE / "linkthumbs.js").read_text(encoding="utf-8") + chr(10) + (HERE / "brief.js").read_text(encoding="utf-8") + chr(10) + (HERE / "modcards.js").read_text(encoding="utf-8") + chr(10) + (HERE / "topnav.js").read_text(encoding="utf-8") + chr(10) + (HERE / "order.js").read_text(encoding="utf-8") + chr(10) + (HERE / "chartstop.js").read_text(encoding="utf-8")   # charts and graphs at the top (22 Nov 2026)
+head = head.replace("</head>", (HERE / "visual.css").read_text(encoding="utf-8") + (HERE / "theme.css").read_text(encoding="utf-8")
+                    + (HERE / "stitch.css").read_text(encoding="utf-8") + (HERE / "explorer.css").read_text(encoding="utf-8")
+                    + (HERE / "pritesh.css").read_text(encoding="utf-8") + "</head>", 1)   # Pritesh / InkTank UI skin (22 Nov 2026), loaded last
+html = "\n".join([head + "<body>", "", body, chat, "<script>", stats_js, data, dash, visual_js, generic])
 assert "{{" not in body
 if "<!--MARKET-->" in body:
     print("WARNING: market section not written yet")
@@ -405,6 +618,18 @@ for f in [".gitignore", ".python-version", ".vercelignore", "requirements.txt", 
     shutil.copyfile(TPL_DIR / f, OUT / f)
 
 (OUT / "private/report.html").write_text(html, encoding="utf-8")
+(OUT / "private" / "media").mkdir(parents=True, exist_ok=True)
+for _m in _media + _caps:
+    shutil.copyfile(HERE / "media" / _m["file"], OUT / "private" / "media" / _m["file"])
+for _f in _moves.values():
+    shutil.copyfile(HERE / "media" / "moves" / _f, OUT / "private" / "media" / _f)
+for _r in _CN_ROWS:
+    if _r[12]:
+        shutil.copyfile(HERE / "media" / "cnsoc" / _r[12], OUT / "private" / "media" / _r[12])
+for _f in set(_evimg.values()):
+    shutil.copyfile(HERE / "media" / "evimg" / _f, OUT / "private" / "media" / _f)
+for _k, _f in _news.items():
+    shutil.copyfile(HERE / "media" / "news" / (_k + ".jpg"), OUT / "private" / "media" / _f)
 (PRU / "Prudential_HK_Competitive_Intelligence_Report.html").write_text(html, encoding="utf-8")
 
 login = (TPL_DIR / "private/login.template.html").read_text(encoding="utf-8")
@@ -424,9 +649,16 @@ _route = """        m = re.fullmatch(r'/narration/pru/([a-z0-9-]{1,40})\\.mp3', 
             clip = ROOT / 'private' / 'narration' / 'pru' / f'{m.group(1)}.mp3'
             return self.send_body(clip.read_bytes(), 'audio/mpeg') if clip.is_file() else self.send_json({'error': 'Not found'}, 404)
 """
+_route += """        m = re.fullmatch(r'/media/([a-z0-9_.-]{1,80}\\.jpg)', self.path)
+        if m:
+            if not self.authed():
+                return self.send_json({'error': 'Sign in required'}, 401)
+            img = ROOT / 'private' / 'media' / m.group(1)
+            return self.send_body(img.read_bytes(), 'image/jpeg') if img.is_file() else self.send_json({'error': 'Not found'}, 404)
+"""
 _hook = "        if self.path == '/api/logout':\n"
 assert api.count(_hook) == 1, "logout hook"
-if "/narration/pru/" not in api:
+if "/media/" not in api:
     api = api.replace(_hook, _route + _hook)
 if "\nimport re\n" not in api and not api.startswith("import re"):
     api = api.replace("import ", "import re\nimport ", 1)
@@ -436,6 +668,73 @@ backend = (TPL_DIR / "backend.py").read_text(encoding="utf-8")
 prompt = (HERE / "system_prompt.txt").read_text(encoding="utf-8").strip()
 backend = re.sub(r'SYSTEM_PROMPT = """.*?"""', lambda m: f'SYSTEM_PROMPT = """{prompt}"""', backend, flags=re.S)
 backend = backend.replace("chris-crozier-report-kb", "prudential-hk-ci-report-kb")
+# 17 Nov 2026, answer speed: cap the model's hidden thinking, and retrieve the relevant social posts per question
+_b0 = 'body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.3}}'
+assert backend.count(_b0) == 1, "backend generationConfig not found"
+backend = backend.replace(_b0, 'body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.3, "thinkingConfig": {"thinkingBudget": 512}}}')
+_b1 = '    turns.append({"role": "user", "parts": [{"text": question}]})'
+assert backend.count(_b1) == 1, "backend question turn not found"
+backend = backend.replace(_b1, '    turns.append({"role": "user", "parts": [{"text": question + retrieve_posts(question) + retrieve_records(question)}]})')
+_b2 = "def build_request(question: str, history: list) -> dict:"
+assert backend.count(_b2) == 1
+backend = backend.replace(_b2, '''# --- retrieval over the individual social posts (private/posts.jsonl): keyword scoring, English words + Chinese character pairs ---
+import math as _math, re
+_POSTS_F = APP_DIR / "private/posts.jsonl"
+POSTS = [json.loads(l) for l in _POSTS_F.read_text(encoding="utf-8").splitlines() if l.strip()] if _POSTS_F.exists() else []
+_STOP = set("the a an of to in on for and or is are was were be by with at from as that this which what how who when do does did their its it vs versus over past last months month year".split())
+def _terms(t):
+    t = (t or "").lower()
+    w = [x for x in re.findall(r"[a-z0-9+]{3,}", t) if x not in _STOP]
+    c = re.findall(r"[\\u4e00-\\u9fff]", t)
+    return w + [c[i] + c[i + 1] for i in range(len(c) - 1)]
+_DF = {}
+for _p in POSTS:
+    _p["_t"] = set(_terms(_p["text"] + " " + _p["line"]))
+    for _x in _p["_t"]:
+        _DF[_x] = _DF.get(_x, 0) + 1
+_BR = {"prudential": "Prudential", "aia": "AIA", "manulife": "Manulife", "axa": "AXA", "保誠": "Prudential", "友邦": "AIA", "宏利": "Manulife", "安盛": "AXA"}
+def retrieve_posts(question, k=80):
+    if not POSTS:
+        return ""
+    qt = set(_terms(question)) - set(_BR)
+    brands = {b for n, b in _BR.items() if n in question.lower()}
+    n = len(POSTS)
+    scored = []
+    for p in POSTS:
+        s = sum(_math.log(1 + n / _DF[x]) for x in qt if x in p["_t"])
+        if brands and p["brand"] in brands:
+            s += 1.5
+        if s > 0:
+            scored.append((s, p["line"]))
+    scored.sort(key=lambda x: -x[0])
+    top = [l for _, l in scored[:k]]
+    return ("\\n\\nRETRIEVED POSTS (the official social posts most relevant to this question, from PARTS I and H; cite with their URL):\\n" + "\\n".join(top)) if top else ""
+_REC_F = APP_DIR / "private/records.jsonl"
+RECORDS = [json.loads(l) for l in _REC_F.read_text(encoding="utf-8").splitlines() if l.strip()] if _REC_F.exists() else []
+_RDF = {}
+for _p in RECORDS:
+    _p["_t"] = set(_terms(_p["text"]))
+    for _x in _p["_t"]:
+        _RDF[_x] = _RDF.get(_x, 0) + 1
+def retrieve_records(question, k=60):
+    if not RECORDS:
+        return ""
+    qt = set(_terms(question)) - set(_BR)
+    brands = {b for n, b in _BR.items() if n in question.lower()}
+    n = len(RECORDS)
+    scored = []
+    for p in RECORDS:
+        s = sum(_math.log(1 + n / _RDF[x]) for x in qt if x in p["_t"])
+        if brands and p["brand"] in brands:
+            s += 1.5
+        if s > 0:
+            scored.append((s, p["line"]))
+    scored.sort(key=lambda x: -x[0])
+    top = [l for _, l in scored[:k]]
+    return ("\\n\\nRETRIEVED EVIDENCE RECORDS (PART D records and PART S posts most relevant to this question; cite with their URL):\\n" + "\\n\\n".join(top)) if top else ""
+
+
+def build_request(question: str, history: list) -> dict:''')
 assert "Chris" not in backend and "Defence" not in backend
 backend, n1 = re.subn(r'return self\.send_json\(\{\s*"ready": state\["ready"\],.*?\}\)',
                       'return self.send_json({"ready": state["ready"], "error": "unavailable" if state["cache_error"] else None})',
@@ -462,8 +761,8 @@ def clean(t, n=None):
 
 parts = [
     ("PART A - THE REPORT (primary source): page text", page_text(body)),
-    ("PART A2 - THE REPORT: tables, cards and timeline data (JavaScript source; links use L(text, url))", data),
-    ("PART A3 - COMPUTED COUNTS used by the report's charts (JSON)", json.dumps(stats, ensure_ascii=False, indent=1)),
+    ("PART A2 - THE REPORT: tables, cards and timeline data (JavaScript source; links use L(text, url))", (HERE / "data.js").read_text(encoding="utf-8")),   # picture maps and PART S data stay out
+    ("PART A3 - COMPUTED COUNTS used by the report's charts (JSON)", json.dumps(stats, ensure_ascii=False, separators=(",", ":"))),
     ("PART A4 - LICENSED COMPANY DATA (snapshot 1 Nov 2026): employee range, workforce mix, technology detected on websites and job ads "
      "(detected does not mean deployed), and research-intent topics (what staff read about online; a research signal, not a purchase). "
      "Cite it as 'licensed data'; never name the provider. Topic volumes differ by company, so do not compare counts.",
@@ -477,6 +776,7 @@ parts.append(("PART C - ANALYST INSIGHTS with evidence rules (earlier analysis b
 
 # PART D: every in-window observation (primary records first), grouped by brand and type.
 obs = []
+_REC = []   # 20 Nov 2026: records go to private/records.jsonl and are retrieved per question (smaller cached knowledge base, faster answers)
 for (cid, rtype, atype, title, desc, content, lang, summ, pub, src, scat, url, hk, plat, size, rid) in q(f"""
         select company_id, record_type, activity_type, title, description, original_content, language, english_summary,
                publication_date, source_name, source_category, source_url, hk_relevance, platform, cluster_size, record_id
@@ -485,10 +785,10 @@ for (cid, rtype, atype, title, desc, content, lang, summ, pub, src, scat, url, h
         order by company_id, record_type, publication_date"""):
     tags = ", ".join(f"{a}:{b}" for a, b in q("select tag_type, tag from observation_tags where record_id=? order by 1,2", rid))
     mets = ", ".join(f"{a}={b:g}" for a, b in q("select metric, value from observation_metrics where record_id=? order by 1", rid))
-    body_txt = clean(content or desc, 240)
-    lines = [f"### [{BRANDS[cid]}] {clean(title, 220)}",
-             f"Date: {pub or 'n/a'} · Type: {rtype}/{atype} · Source: {src} ({scat}) · Hong Kong relevance: {hk}"
-             + (f" · Platform: {plat}" if plat else "") + (f" · Same story in {size} outlets" if size and size > 1 else "")]
+    body_txt = clean(content or desc, 160)   # 17 Nov 2026: shorter fields, for Ask Intelligence speed
+    # one compact header line per record (17 Nov 2026; every record here is Hong Kong-relevant, so that field is left out)
+    lines = [f"### [{BRANDS[cid]}] {pub or 'n/a'} · {rtype}/{atype} · {src} ({scat}{', ' + plat if plat and plat != scat else ''})"
+             + (f" · same story in {size} outlets" if size and size > 1 else "") + f" · {clean(title, 200)}"]
     if url and "news.google.com" in url:
         lines.append("URL: none (found via a Google News redirect link; cite the outlet name and date)")
     elif url and not url.startswith("javascript"):
@@ -496,14 +796,57 @@ for (cid, rtype, atype, title, desc, content, lang, summ, pub, src, scat, url, h
     if mets:
         lines.append(f"Metrics: {mets}")
     if summ and summ != desc and lang != "en":   # English records: the summary repeats the text
-        lines.append(f"English summary: {clean(summ, 600)}")
+        lines.append(f"English summary: {clean(summ, 280)}")
     if body_txt and not (summ and lang != "en"):   # Chinese records with an English summary: the summary replaces the long original (title kept)
         lines.append(f"Text: {body_txt}")
     obs.append("\n".join(lines))
-parts.append((f"PART D - EVIDENCE RECORDS (official releases, media coverage, LinkedIn posts, app listings and reviews, website features; Hong Kong-linked records only; "
+    _REC.append({"line": "\n".join(lines), "brand": BRANDS[cid], "text": " ".join(lines)})
+_dcount = Counter((r["brand"], r["line"].split(" · ")[1].split("/")[0]) for r in _REC)
+parts.append(("PART D - EVIDENCE RECORDS (searchable; 20 Nov 2026, answer speed)",
+              f"{len(_REC)} Hong Kong-linked records (official releases, media coverage, app listings and reviews, website features; 1 Nov 2025 - 31 Oct 2026, "
+              "duplicates of the same story merged) are held as searchable records. The records most relevant to each question are appended after the question "
+              "under 'RETRIEVED EVIDENCE RECORDS'; quote them with their URL. Counts by brand and record type (use these for totals, not the retrieved sample): "
+              + "; ".join(f"{b} {t}: {n}" for (b, t), n in sorted(_dcount.items()))))
+if False: parts.append((f"PART D - EVIDENCE RECORDS (official releases, media coverage, LinkedIn posts, app listings and reviews, website features; Hong Kong-linked records only; "
               f"{len(obs)} records, 1 Nov 2025 - 31 Oct 2026, duplicates of the same story merged)", "\n\n".join(obs)))
 
 cov = q("select company_id, source, status, records, note from source_coverage order by 1, 2")
+# PART R: walkthrough additions (16 Nov 2026) - health and critical-illness products, positioning and calls to action, named media sources
+_r = []
+if _hcf.exists():
+    _r += ["HEALTH AND CRITICAL-ILLNESS PRODUCTS AND ACTIVITY (official brochures and product pages; 'verification' says how each figure was checked):",
+           _hcf.read_text(encoding="utf-8")]
+_pos = {}
+for _x in evid:
+    if ((_x[3] == "social_post" and _x[8] != "Threads") or (_x[3] == "ad" and _x[8] == "Meta ads")) and 202511 <= int(_x[1]) // 100 <= 202610:   # same 12 months as the dashboard tables
+        _d = _pos.setdefault(_x[2], {"records": 0, "narr": {}, "cta": {}, "with_cta": 0})
+        _d["records"] += 1
+        _t = narr.get(_x[0])
+        if _t:
+            for _k in _t[0]:
+                _d["narr"][_k] = _d["narr"].get(_k, 0) + 1
+            if _t[1]:
+                _d["with_cta"] += 1
+                _d["cta"][_t[1]] = _d["cta"].get(_t[1], 0) + 1
+_r += ["", "EMOTIONAL POSITIONING AND CALLS TO ACTION BY BRAND (rule-based keyword counts over every Facebook, Instagram and LinkedIn post and every "
+       "Facebook / Instagram ad dated 1 Nov 2025 - 31 Oct 2026, the same records as the dashboard tables; narratives: family = family and promises, health = health, wellness and longevity, wealth = wealth and "
+       "financial independence, premium = premium / high-net-worth, rewards = rewards and promotions; calls to action: explore, adviser = talk to an adviser, "
+       "apply = quote or apply, signup = sign up or register, app = use the app; ads use the ad's own button):",
+       json.dumps(_pos, ensure_ascii=False, indent=1),
+       "Campaign-level value propositions and calls to action (hand-reviewed) are in PART A2 under CAMPAIGNS."]
+if _msf.exists():
+    _r += ["", "NAMED NEWS, MARKETING AND INSURANCE PUBLICATIONS SEARCHED (site: searches for each brand, English and Chinese, 1 Nov 2025 - 31 Oct 2026; "
+           "hits = brand headlines found; records = new records added; already_held = found earlier by other searches):", _msf.read_text(encoding="utf-8")]
+parts.append(("PART R - HEALTH AND CRITICAL ILLNESS, POSITIONING AND CALLS TO ACTION, AND MEDIA SOURCES SEARCHED (added 16 Nov 2026)", "\n".join(_r)))
+
+# PART S: Xiaohongshu and WeChat conversation about the four insurers (search-based; 20 Nov 2026)
+_cn_head, _, _cn_posts = _CN_KB.partition("Posts (date | insurer")
+parts.append(("PART S - MAINLAND SOCIAL CONVERSATION: XIAOHONGSHU AND WECHAT POSTS ABOUT THE FOUR INSURERS (search-based, not part of the activity counts)",
+              _cn_head + "The individual posts are searchable records: the most relevant to each question are appended after it under 'RETRIEVED EVIDENCE RECORDS'."))
+for _l in _cn_posts.splitlines()[1:]:
+    if _l.strip():
+        _f = _l.split(" | ")
+        _REC.append({"line": "[Mainland social, search-based] " + _l, "brand": _f[1] if len(_f) > 1 else "", "text": _l})
 parts.append(("PART E - SOURCE COVERAGE by brand (what was and was not available)",
               "\n".join(f"{BRANDS[c]} | {s} | {stt} | {n} records" + (f" | {clean(nt)}" if nt else "") for c, s, stt, n, nt in cov)))
 
@@ -529,16 +872,28 @@ for nm, lab in [("deep_prudential.md", "Prudential Hong Kong"), ("deep_aia.md", 
                 ("deep_axa.md", "AXA Hong Kong"), ("deep_crossbrand.md", "cross-brand data (app reviews, media, licensed data)")]:
     parts.append((f"PART G - ANALYST DEEP READ: {lab} (findings with page-level sources; 'derived' numbers are analyst calculations; "
                   "where it differs from PART A, PART A wins)", (PRU / "_report_work" / nm).read_text(encoding="utf-8")))
-parts.append(("PART I - FACEBOOK AND INSTAGRAM POSTS of the official HK accounts, 1 Nov 2025 - 31 Oct 2026. Facebook engagement rate = "
-              "(reactions + shares) / page followers; Instagram = (likes + comments) / followers; followers shown on 11 Nov 2026. "
-              "Followers: " + json.dumps(META_STATS["followers"]), "\n".join(f"[{p_['brand']} · {p_['platform']}] {p_['date']} · {p_['format']} · "
-              f"reactions {p_['reactions']}, comments {p_['comments']}, shares {p_['shares']}, engagement rate {p_['er']}% · URL: {p_['url']}\n"
-              + (f"EN: {TR_DB[p_['url']]['en']}" if (TR_DB.get(p_['url']) or {}).get('en') else p_['text'][:110])
-              for p_ in META_POSTS)))
-parts.append(("PART H - COMPANY LINKEDIN POSTS, 1 Nov 2025 - 31 Oct 2026 (engagement rate = (reactions + comments + reposts) / followers shown "
-              "on 11 Nov 2026 x 100)", "\n".join(f"[{p_['brand']}] {p_['date']} · {p_['format']} · reactions {p_['likes']}, comments {p_['comments']}, "
-              f"reposts {p_['shares']}, engagement rate {p_['er']}% · themes: {', '.join(p_['themes']) or 'none'} · URL: {p_['url']}\n{p_['text'][:160]}"
-              for p_ in LI_POSTS)))
+# PARTS I and H (17 Nov 2026, answer speed): the individual posts are no longer sent in full with every question. They are written to
+# private/posts.jsonl; the backend searches them per question and appends the most relevant ones after the question ("RETRIEVED POSTS").
+# Totals, engagement, themes and positioning per brand stay here (PART A3, PART R and the report text).
+_posts = []
+for p_ in META_POSTS:
+    _en = (TR_DB.get(p_['url']) or {}).get('en')
+    _posts.append({"line": f"[{p_['brand']} · {p_['platform']}] {p_['date']} · {p_['format']} · reactions {p_['reactions']}, comments {p_['comments']}, "
+                           f"shares {p_['shares']}, engagement rate {p_['er']}% · URL: {p_['url']}\n" + (f"EN: {clean(_en, 220)}" if _en else clean(p_['text'], 200)),
+                   "brand": p_['brand'], "text": (p_['text'] or "")[:600] + " " + (_en or "")})
+for p_ in LI_POSTS:
+    _posts.append({"line": f"[{p_['brand']} · LinkedIn] {p_['date']} · {p_['format']} · reactions {p_['likes']}, comments {p_['comments']}, reposts {p_['shares']}, "
+                           f"engagement rate {p_['er']}% · themes: {', '.join(p_['themes']) or 'none'} · URL: {p_['url']}\n{clean(p_['text'], 220)}",
+                   "brand": p_['brand'], "text": (p_['text'] or "")[:600] + " " + " ".join(p_['themes'])})
+(OUT / "private").mkdir(exist_ok=True)
+(OUT / "private" / "posts.jsonl").write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in _posts), encoding="utf-8")
+(OUT / "private" / "records.jsonl").write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in _REC), encoding="utf-8")
+parts.append(("PARTS I AND H - INDIVIDUAL SOCIAL POSTS (Facebook, Instagram, Threads, LinkedIn; 1 Nov 2025 - 31 Oct 2026)",
+              f"{len(_posts)} official posts are held as searchable records. The posts most relevant to each question are appended after the question "
+              "under 'RETRIEVED POSTS'; quote them with their URL. Per-brand totals, engagement rates, themes, narratives and calls to action for ALL posts "
+              "are in PART A3 and PART R; use those for counts and comparisons, not the retrieved sample. Facebook engagement rate = (reactions + shares) / "
+              "page followers; Instagram = (likes + comments) / followers; LinkedIn = (reactions + comments + reposts) / followers; Threads = (likes + replies "
+              "+ reposts + quotes) / followers; followers shown on 11 Nov 2026: " + json.dumps(META_STATS["followers"])))
 
 # PART J - YouTube video transcripts (Prudential and AXA official channels; auto-generated captions where available)
 def _yt_transcripts():
@@ -663,7 +1018,7 @@ corpus ="\n\n".join(f"========== {t} ==========\n{c}" for t, c in parts)
 # Never publish personal contact details: press-release media blocks carry staff mobiles and emails.
 corpus = re.sub(r"[\w.+-]+@[\w-]+(\.[\w-]+)+", "[email removed]", corpus)
 corpus = re.sub(r"(\+?852[ -]?)?\b[5-9]\d{3}[ -]?\d{4}\b", "[phone removed]", corpus)
-for pat in (r"[\w.+-]+@prudential\.com\.hk", r"5580 7525|6188 6381|5275 5360"):
+for pat in (r"[\w.+-]+@prudential\.com\.hk", r"(\+?852[ -]?)?\b[5-9]\d{3}[ -]?\d{4}\b"):
     assert not re.search(pat, corpus), f"personal contact detail in knowledge base: {pat}"
 (OUT / "private/corpus.md").write_text(corpus, encoding="utf-8")
 # Narrated guided tour (player + step list; recorded clips if present, browser voice otherwise)

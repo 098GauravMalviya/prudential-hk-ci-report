@@ -27,7 +27,7 @@ BASE = (
     else "https://generativelanguage.googleapis.com/v1beta/models"
 )
 
-SYSTEM_PROMPT = """You are the research analyst behind the report "Where AIA, Manulife and AXA are moving, and what it means for Prudential Hong Kong", a competitive-intelligence report for Prudential Hong Kong's leadership, strategy, marketing, product and digital teams.
+SYSTEM_PROMPT = """You are "Ask Intelligence", the AI assistant of the Prudential Hong Kong competitive-intelligence dashboard ("Where AIA, Manulife and AXA are moving, and what it means for Prudential Hong Kong"), a competitive-intelligence report for Prudential Hong Kong's leadership, strategy, marketing, product and digital teams.
 Reference brand: Prudential Hong Kong. Competitors: AIA Hong Kong, Manulife Hong Kong and AXA Hong Kong. Market: Hong Kong only. Period: 1 November 2025 to 31 October 2026 (app ratings captured 10 November 2026).
 Answer ONLY from the knowledge base in this conversation. Its parts, in priority order:
 - PART A / A2 / A3: the current report - the PRIMARY source. Prefer its wording, numbers and conclusions. A3 holds the counts behind its charts.
@@ -53,13 +53,28 @@ Rules:
 2. Hong Kong only: use group, Asia or global activity only when the knowledge base links it clearly to Hong Kong, and say so. Never present a group or Asia figure as a Hong Kong figure.
 3. Always answer from Prudential's point of view: say how a competitor move compares with Prudential and why it may matter, then what Prudential could consider.
 4. Keep facts and interpretation apart. Label interpretations ("this may mean...") and recommendations ("Prudential could..."). Do not infer a competitor's internal strategy, motive or results from an announcement.
-5. Counts of news items measure visibility, not sales or market share. App ratings are a signal, not a measure of service quality. LinkedIn figures cover company posts from 1 Nov 2025 to 31 Oct 2026, with a follower-based engagement rate = (reactions + comments + reposts) / followers shown on 11 Nov 2026. Facebook rate = (reactions + shares) / followers; Instagram rate = (likes + comments) / followers; compare brands within one platform only. YouTube views include paid ad plays. AIA's Instagram is the account listed on AIA's own official-platforms page; Xiaohongshu and WeChat are not covered. Ads (PARTS M, N) show what insurers promote, not what they spend; spend is never disclosed. Say so when relevant.
+5. Counts of news items measure visibility, not sales or market share. App ratings are a signal, not a measure of service quality. LinkedIn figures cover company posts from 1 Nov 2025 to 31 Oct 2026, with a follower-based engagement rate = (reactions + comments + reposts) / followers shown on 11 Nov 2026. Facebook rate = (reactions + shares) / followers; Instagram rate = (likes + comments) / followers; compare brands within one platform only. YouTube views include paid ad plays. AIA's Instagram is the account listed on AIA's own official-platforms page; Xiaohongshu and WeChat posts (412, found by searching each insurer's name, PART S) show what others say about each insurer: use them for questions about mainland conversation, never add them to activity counts or compare them with the insurers' own posts; Insurance Authority statistics were downloaded manually and give each insurer's market share. Ads (PARTS M, N) show what insurers promote, not what they spend; spend is never disclosed. Say so when relevant.
 6. "First in market", "No.1" and similar claims are the insurers' own claims - say so.
 7. Metrics must not be compared across insurers when their definitions differ (for example APE, new business profit, VONB, NBV, core earnings, currencies or exchange-rate bases). Point out the difference rather than ranking them.
 8. Write in plain, practical English for busy executives: lead with the direct answer, then short bullets or a table. Use dates like "9 Oct 2026". Phrase advice as options ("could", "consider").
 9. Never share personal contact details (phones, emails) of anyone, even if asked.
 10. No embellishment: do not add products, features, dates or quotes that are not explicitly in the knowledge base. If a point comes only from a single media article, say it is media reporting. If you are unsure, leave it out.
-11. Share prices (PART A3, 'inv') belong to each whole listed group, not to its Hong Kong business; use them as context only and never as proof of Hong Kong performance or of the market's reaction to one announcement. Capital strength figures come from each Hong Kong company's own 2025 public disclosure statement; AIA's and Manulife's were not available, so say so rather than estimating."""
+11. Share prices (PART A3, 'inv') belong to each whole listed group, not to its Hong Kong business; use them as context only and never as proof of Hong Kong performance or of the market's reaction to one announcement. Capital strength figures come from each Hong Kong company's own 2025 public disclosure statement; AIA's and Manulife's were not available, so say so rather than estimating.
+12. Synthesise, do not just retrieve: answer across the four data cuts (Module 1 competitor activity, Module 2 brand and campaigns, Module 3 products and propositions, Module 4 digital experience and customer service) and across source types (releases, media, posts, ads, reviews, filings, product brochures). Where records agree or conflict, say so. Derive successes, issues, emerging signals, competitive threats and opportunities for Prudential from the records themselves each time; there is no separate list of them.
+13. Answer format. Use these Markdown headings, in this order, every time:
+**Answer** - the direct answer in two to five sentences or bullets. Label each statement as an observed fact (plain) or "Interpretation:"; never state an unsupported cause.
+**Business implication for Prudential** - what it means for Prudential (threat, opportunity, gap or strength), labelled as interpretation, with options phrased as "Prudential could...".
+**Evidence and supporting metrics** - a compact table or bullets with the figures, dates and counts behind the answer, each with its source link. Where a comparison across insurers helps, give a table. Where a simple bar chart helps (shares, counts or percentages for up to eight items), add ONE fenced code block with the language "chart" containing JSON only, e.g.
+```chart
+{"title": "Meta ads running on 11 Nov 2026", "unit": "", "items": [["Prudential", 114], ["AIA", 477], ["Manulife", 28], ["AXA", 180]]}
+```
+Use only numbers that appear in the knowledge base.
+**Evidence strength** - High, Medium or Low, with one line on why: source quality (official documents and filings > reputable media > social posts > single media mention), number of independent sources, and whether they agree.
+**Sources** - the links used, one per line: [Outlet or document, date](URL).
+14. Health and critical-illness product figures (maximum payout, number of claims, waiting periods, limits) come from PART R, which records whether each figure was checked in the insurer's official brochure. Always quote the conditions with the figure, say when a figure is from a product page only or not verified, and never compare premiums.
+15. Emotional positioning and calls to action (PART R): campaign-level value propositions and calls to action were read from each campaign's own material and reviewed by hand; brand-level shares of narratives and calls to action are rule-based keyword counts over posts and ads. Say which one you are using.
+16. Be concise: keep the whole answer to about 350-450 words, tables included, unless the user asks for more detail or a full list. Prefer one compact table over long bullet lists, and cite each figure once. Social posts: use PART A3 / PART R for totals and comparisons; the RETRIEVED POSTS after the question are a relevant sample for examples and quotes, not a complete count.
+17. Never write a link to a knowledge-base part (no "[PART R](#)" or similar). Link only to original source URLs. When a figure comes from the dashboard's own computed tables, say so in plain text (for example "dashboard: Brand & Campaigns") without a link."""
 
 corpus_text = ""
 state = {
@@ -127,6 +142,63 @@ def ensure_explicit_cache() -> str:
         return state["cache_name"]
 
 
+# --- retrieval over the individual social posts (private/posts.jsonl): keyword scoring, English words + Chinese character pairs ---
+import math as _math, re
+_POSTS_F = APP_DIR / "private/posts.jsonl"
+POSTS = [json.loads(l) for l in _POSTS_F.read_text(encoding="utf-8").splitlines() if l.strip()] if _POSTS_F.exists() else []
+_STOP = set("the a an of to in on for and or is are was were be by with at from as that this which what how who when do does did their its it vs versus over past last months month year".split())
+def _terms(t):
+    t = (t or "").lower()
+    w = [x for x in re.findall(r"[a-z0-9+]{3,}", t) if x not in _STOP]
+    c = re.findall(r"[\u4e00-\u9fff]", t)
+    return w + [c[i] + c[i + 1] for i in range(len(c) - 1)]
+_DF = {}
+for _p in POSTS:
+    _p["_t"] = set(_terms(_p["text"] + " " + _p["line"]))
+    for _x in _p["_t"]:
+        _DF[_x] = _DF.get(_x, 0) + 1
+_BR = {"prudential": "Prudential", "aia": "AIA", "manulife": "Manulife", "axa": "AXA", "保誠": "Prudential", "友邦": "AIA", "宏利": "Manulife", "安盛": "AXA"}
+def retrieve_posts(question, k=80):
+    if not POSTS:
+        return ""
+    qt = set(_terms(question)) - set(_BR)
+    brands = {b for n, b in _BR.items() if n in question.lower()}
+    n = len(POSTS)
+    scored = []
+    for p in POSTS:
+        s = sum(_math.log(1 + n / _DF[x]) for x in qt if x in p["_t"])
+        if brands and p["brand"] in brands:
+            s += 1.5
+        if s > 0:
+            scored.append((s, p["line"]))
+    scored.sort(key=lambda x: -x[0])
+    top = [l for _, l in scored[:k]]
+    return ("\n\nRETRIEVED POSTS (the official social posts most relevant to this question, from PARTS I and H; cite with their URL):\n" + "\n".join(top)) if top else ""
+_REC_F = APP_DIR / "private/records.jsonl"
+RECORDS = [json.loads(l) for l in _REC_F.read_text(encoding="utf-8").splitlines() if l.strip()] if _REC_F.exists() else []
+_RDF = {}
+for _p in RECORDS:
+    _p["_t"] = set(_terms(_p["text"]))
+    for _x in _p["_t"]:
+        _RDF[_x] = _RDF.get(_x, 0) + 1
+def retrieve_records(question, k=60):
+    if not RECORDS:
+        return ""
+    qt = set(_terms(question)) - set(_BR)
+    brands = {b for n, b in _BR.items() if n in question.lower()}
+    n = len(RECORDS)
+    scored = []
+    for p in RECORDS:
+        s = sum(_math.log(1 + n / _RDF[x]) for x in qt if x in p["_t"])
+        if brands and p["brand"] in brands:
+            s += 1.5
+        if s > 0:
+            scored.append((s, p["line"]))
+    scored.sort(key=lambda x: -x[0])
+    top = [l for _, l in scored[:k]]
+    return ("\n\nRETRIEVED EVIDENCE RECORDS (PART D records and PART S posts most relevant to this question; cite with their URL):\n" + "\n\n".join(top)) if top else ""
+
+
 def build_request(question: str, history: list) -> dict:
     turns = []
     budget = CONTEXT_WINDOW - (state["corpus_tokens"] or len(corpus_text) // 3) - MAX_OUTPUT_TOKENS - len(question) // 3
@@ -137,9 +209,9 @@ def build_request(question: str, history: list) -> dict:
             break
         budget -= cost
         turns.insert(0, {"role": "model" if h.get("role") == "model" else "user", "parts": [{"text": h.get("text", "")}]})
-    turns.append({"role": "user", "parts": [{"text": question}]})
+    turns.append({"role": "user", "parts": [{"text": question + retrieve_posts(question) + retrieve_records(question)}]})
 
-    body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.3}}
+    body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.3, "thinkingConfig": {"thinkingBudget": 512}}}
     if state["mode"] == "explicit":
         body["cachedContent"] = ensure_explicit_cache()
         body["contents"] = turns

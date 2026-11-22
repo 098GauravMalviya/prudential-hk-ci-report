@@ -29,6 +29,10 @@ JOBS = {
     "ig_posts_aia": ("apify~instagram-post-scraper", {"username": ["AIAHongKongMacau"], "resultsLimit": 400, "onlyPostsNewerThan": SINCE}),
     "ig_profile_aia": ("apify~instagram-profile-scraper", {"usernames": ["AIAHongKongMacau"]}),
     "threads_aia": ("apify~threads-profile-api-scraper", {"usernames": ["aiahongkongmacau"]}),
+    # 17 Nov 2026: Threads posts. Threads accounts share the Instagram username, so the other three brands' handles are checked too.
+    "threads_profiles": ("apify~threads-profile-api-scraper", {"usernames": ["aiahongkongmacau", "prudential.hongkong", "axahongkong", "manulife_hongkong"]}),
+    "threads_posts": ("futurizerush~threads-user-posts-scraper", {"usernames": ["aiahongkongmacau"], "maxPosts": 400}),
+    "threads_posts_pru": ("futurizerush~threads-user-posts-scraper", {"usernames": ["prudential.hongkong"], "maxPosts": 600}),
     # Meta Ad Library, Hong Kong, by Ad Library page id (Prudential, AXA, Manulife, AIA)
     "fb_ads": ("apify~facebook-ads-scraper", {"startUrls": [{"url": f"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=HK&media_type=all&view_all_page_id={pid}"}
                                                              for pid in ("191172447574636", "381309905353457", "485081128298580", "233237970068198")],
