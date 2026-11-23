@@ -32,11 +32,12 @@
   // ---- the detail panel
   const sh = document.createElement("div");
   sh.className = "dsheet"; sh.hidden = true;
-  sh.innerHTML = `<div class="ds-panel" role="dialog" aria-modal="true" aria-label="Detail"><button type="button" class="ds-x" aria-label="Close">×</button><div class="ds-body"></div></div>`;
+  sh.innerHTML = `<div class="ds-panel" role="dialog" aria-modal="true" aria-label="Detail"><div class="ds-head"><button type="button" class="btn ds-back" aria-label="Back">← Back</button><button type="button" class="ds-x" aria-label="Close">×</button></div><div class="ds-body"></div></div>`;
   document.body.appendChild(sh);
   const body = sh.querySelector(".ds-body");
   let lastFocus = null;
   const close = () => { sh.hidden = true; document.documentElement.classList.remove("ds-open"); lastFocus?.focus?.(); };
+  window.closeSheet = close;
   function openSheet({ img, href, label, meta, title, html, actions }) {
     lastFocus = document.activeElement;
     body.innerHTML = `${img ? `<figure class="ds-img" data-href="${esc(href || "")}" data-label="${esc(label || "")}" title="${href ? "Open the evidence record" : ""}"><img src="${img}" alt="">${href ? '<figcaption>Open the evidence record →</figcaption>' : ""}</figure>` : ""}
@@ -46,7 +47,7 @@
     sh.querySelector(".ds-x").focus();
   }
   sh.addEventListener("click", e => {
-    if (e.target === sh || e.target.closest(".ds-x")) return close();
+    if (e.target === sh || e.target.closest(".ds-x, .ds-back")) return close();
     const fig = e.target.closest(".ds-img[data-href]");
     if (fig && fig.dataset.href) { close(); return window.routeEv(fig.dataset.href, fig.dataset.label); }
     const act = e.target.closest("[data-act]");

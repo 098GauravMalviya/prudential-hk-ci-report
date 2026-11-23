@@ -11,7 +11,7 @@
     return Math.max(w, vb, r) >= 140;
   };
   const isChart = el => el && el.nodeType === 1 && !el.matches(".hci-off, .sup-wrap, details, .tbl-wrap, .insight, .ov, nav, .fbar") &&
-    (el.matches("canvas") || el.querySelector("canvas") || (el.matches("svg") && big(el)) || qa("svg", el).some(big) || el.matches("#tiles"));
+    (el.matches("canvas") || el.querySelector("canvas") || (el.matches("svg") && big(el)) || qa("svg", el).some(big) || el.matches("#tiles, .tiles, .kpis, #appSummary, #appRatings"));
   const HEAD = ".vhead, .sec-head, #evBarHold, .onestrip, .ckey, .insight.mc, .ct-h";
   const LEAD = "button.pd-more, p.muted.small, p.small.muted";
 
@@ -79,9 +79,15 @@
     if (lkTitle) { const h2 = document.createElement("div"); h2.className = "ct-card-head"; h2.append(lkTitle); if (lkSub) h2.append(lkSub); lkCard.prepend(h2); }
     erCard.classList.add("ct-panel"); lkCard.classList.add("ct-panel", "ct-panel-bars");
     // two equal panels, one chart each (the bar chart is drawn at the line chart's shape in dashboard.js, so both are the same size);
-    // "most engaging posts" keeps its own full-width row underneath
+    // "most engaging posts" moves to the top right under the charts (review call feedback)
     left.append(erCard); right.append(lkCard); pair.append(left, right);
     grid.classList.add("ct-single");
+    const tp = document.getElementById("topPosts");
+    const tpCard = tp ? tp.closest(".card") : null;
+    if (tpCard && tpCard !== erCard && tpCard !== lkCard) {
+      pair.insertAdjacentElement("afterend", tpCard);
+      tpCard.classList.add("ct-moved", "ct-top-posts");
+    }
   }
 
   // heatmap tables that read as charts join the visual block (operator, 22 Nov 2026): theme x brand share / engagement

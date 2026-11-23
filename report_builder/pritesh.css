@@ -245,4 +245,91 @@ table.ct-fire td:nth-child(3) { min-width:200px; }
 .ct-fire-pair .ct-col:first-child table th, .ct-fire-pair .ct-col:first-child table td { padding:6px 4px !important; font-size:12px !important; vertical-align:middle; }
 .ct-fire-pair .ct-col:first-child table th { font-size:9px !important; }
 .ct-fire-pair .ct-col:first-child table td .bp { font-size:10.5px !important; padding:1px 5px !important; }
+
+/* ==========================================================================
+   Review Call Feedback Refinements (22 Nov 2026)
+   - Prominent sticky Back button at top of Evidence view
+   - Leadership Brief unified layout, padding, and margins
+   - Progressive disclosure clean styling
+   - Supporting screenshots & complementary evidence section at bottom
+   - Top engaging posts in visual block
+   ========================================================================== */
+
+/* 1. Inspect Evidence: Top Back Button & Header */
+.ev-top-nav, #evTopNav {
+  position:sticky !important; top:76px !important; z-index:45 !important;
+  margin:0 0 16px !important; padding:10px 14px !important;
+  background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important;
+  border-radius:6px !important; box-shadow:0 2px 8px rgba(0,0,0,.06) !important;
+}
+.ev-top-bar { display:flex !important; align-items:center !important; justify-content:space-between !important; width:100% !important; gap:12px; }
+.ev-back-btn, #evMainBackBtn {
+  display:inline-flex !important; align-items:center !important; gap:8px !important;
+  font:700 12.5px var(--pk-mono) !important; background:var(--pk-active) !important;
+  color:var(--pk-active-ink) !important; border:1px solid var(--pk-active) !important;
+  border-radius:6px !important; padding:7px 16px !important; cursor:pointer !important;
+  text-transform:uppercase !important; letter-spacing:.05em !important; transition:all .15s ease !important;
+}
+.ev-back-btn:hover, #evMainBackBtn:hover { opacity:.92; transform:translateX(-2px); }
+.ev-back-arrow { font-size:14px; font-weight:800; line-height:1; }
+.ev-context-tag { font:600 11px var(--pk-mono) !important; color:var(--pk-ink-3) !important; text-transform:uppercase; letter-spacing:.06em; }
+
+/* Detail panel top header with Back and Close */
+.ds-head { position:sticky; top:0; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:12px 20px; background:var(--pk-surface); border-bottom:1px solid var(--pk-line); }
+.ds-back { font:600 12px var(--pk-mono) !important; padding:5px 12px !important; border-radius:4px !important; }
+.ds-panel .ds-x { position:static !important; float:none !important; margin:0 !important; width:32px !important; height:32px !important; border-radius:4px !important; background:var(--pk-surface-2) !important; color:var(--pk-ink) !important; border:1px solid var(--pk-line) !important; font-size:18px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; cursor:pointer !important; }
+
+/* 2. Leadership Brief Tab (#one): Margins & Layout Consistency */
+#one .onepage { max-width:1340px !important; margin:0 auto !important; padding:0 10px !important; }
+#one .onepage .grid.g2 { display:grid !important; grid-template-columns:1fr 1fr !important; gap:16px !important; margin:16px 0 !important; }
+#one .op-box {
+  background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important;
+  border-radius:6px !important; padding:18px 20px !important; margin:0 0 16px !important;
+  box-shadow:none !important;
+}
+#one .op-box h4 {
+  margin:0 0 12px !important; font:700 13px var(--pk-mono) !important; text-transform:uppercase;
+  letter-spacing:.06em; color:var(--pk-ink) !important; border-bottom:1px solid var(--pk-line);
+  padding-bottom:8px;
+}
+#one .op-box.ob-hero { display:grid !important; grid-template-columns:minmax(0,1fr) 260px !important; gap:20px !important; align-items:center !important; }
+#one .ob-hero .ob-pic { border:1px solid var(--pk-line) !important; border-radius:6px !important; overflow:hidden; }
+#one .ob-hero .ob-pic img { aspect-ratio:16/10; object-fit:cover; }
+#one #opCo { width:100% !important; border-collapse:collapse; }
+#one #opCo td, #one #opCo th { padding:10px 12px !important; vertical-align:middle !important; border-bottom:1px solid var(--pk-line) !important; }
+#one .ob-co { width:100px !important; height:62px !important; object-fit:cover !important; border-radius:4px !important; margin-top:6px !important; border:1px solid var(--pk-line) !important; }
+#one .ob-docs { display:grid !important; grid-template-columns:repeat(4, minmax(0,1fr)) !important; gap:14px !important; margin:14px 0 6px !important; }
+#one .ob-doc { background:var(--pk-surface) !important; border:1px solid var(--pk-line) !important; border-radius:6px !important; padding:10px !important; text-align:center; }
+#one ul.ob-list, #one ol.ob-list { list-style:none !important; padding-left:0 !important; margin:8px 0 0 !important; }
+#one li.ob-li {
+  display:grid !important; grid-template-columns:104px minmax(0,1fr) !important; gap:14px !important;
+  align-items:start !important; margin:0 0 10px !important; padding:10px 12px !important;
+  border:1px solid var(--pk-line) !important; border-radius:6px !important; background:var(--pk-surface) !important;
+}
+#one li.ob-li .ob-th { width:104px !important; aspect-ratio:16/10 !important; border-radius:4px !important; overflow:hidden !important; border:1px solid var(--pk-line) !important; }
+#one li.ob-li .ob-th img { width:100%; height:100%; object-fit:cover; display:block; }
+#one li.ob-li .ob-body { font-size:13px !important; line-height:1.55 !important; }
+
+/* 3. Progressive Disclosure Controls */
+p.pd-clamp2 { display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical !important; overflow:hidden !important; margin-bottom:4px !important; }
+button.pd-more.pd-see {
+  font:600 11.5px var(--pk-mono) !important; color:var(--pk-link) !important;
+  background:var(--pk-surface-2) !important; border:1px solid var(--pk-line-2) !important;
+  border-radius:4px !important; padding:3px 10px !important; margin:4px 0 10px !important;
+  cursor:pointer !important; display:inline-flex !important; align-items:center !important;
+  gap:6px !important; text-decoration:none !important;
+}
+button.pd-more.pd-see:hover { background:var(--pk-line) !important; color:var(--pk-ink) !important; }
+li.pd-li-hide { display:none !important; }
+
+/* 4. Supporting Screenshots Section (Bottom of each tab) */
+.sup-wrap { margin-top:32px !important; padding-top:18px !important; border-top:1px solid var(--pk-line) !important; }
+.sup-h { font:700 13px var(--pk-mono) !important; text-transform:uppercase; letter-spacing:.06em; color:var(--pk-ink) !important; margin:0 0 4px !important; }
+.sup-sub { font:500 12px var(--pk-sans) !important; color:var(--pk-ink-3) !important; margin:0 0 16px !important; }
+
+/* 5. Most Engaging Posts at Top */
+.ct-top-posts { margin-top:16px !important; border:1px solid var(--pk-line) !important; }
+
+/* 6. Mainland Platform Filter Note */
+.cn-filter-note { font:600 11.5px var(--pk-mono) !important; padding:6px 10px !important; border-left:3px solid var(--pk-link) !important; background:var(--pk-surface-2) !important; border-radius:0 4px 4px 0 !important; margin:10px 0 !important; }
 </style>
