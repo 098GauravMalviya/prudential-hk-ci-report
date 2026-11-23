@@ -7,7 +7,6 @@
 .vercel/
 
 # Client deliverables and collected data: kept out of this public repository
-**/private/report.html
 **/private/corpus.md
 **/private/narration/
 **/data/

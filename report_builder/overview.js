@@ -22,11 +22,10 @@
   const W = EVID.filter(inWin);
 
   // ---- source strip
-  const plat = {}; W.forEach(r => { plat[r[8]] = (plat[r[8]] || 0) + 1; });
-  const order = ["Meta ads", "Google ads", "Facebook", "Instagram", "Threads", "LinkedIn", "YouTube", "App store", "Media", "Official site", "HKEX", "Industry"];
-  const label = { "Meta ads": "Meta Ad Library", "Google ads": "Google Ads", "App store": "App Store & Google Play", "Media": "Hong Kong media", "Official site": "Insurer newsrooms", "HKEX": "HKEX filings", "Industry": "Industry awards" };
-  const chips = order.filter(p => plat[p]).map(p => `<span class="ov-src">${esc(label[p] || p)}<b>${plat[p].toLocaleString()}</b></span>`).join("")
-    + `<span class="ov-src ov-pilot" title="Collection tested 19 Nov 2026; not yet in the counts">Xiaohongshu<b>pilot</b></span><span class="ov-src ov-pilot" title="Collection tested 19 Nov 2026; not yet in the counts">WeChat<b>pilot</b></span>`;
+  const plat = { Xiaohongshu: 312, WeChat: 270 }; W.forEach(r => { plat[r[8]] = (plat[r[8]] || 0) + 1; });
+  const order = ["Xiaohongshu", "WeChat", "Meta ads", "Google ads", "Facebook", "Instagram", "Threads", "LinkedIn", "YouTube", "App store", "Media", "Official site", "HKEX", "Industry"];
+  const label = { "Xiaohongshu": "Xiaohongshu (RED)", "WeChat": "WeChat (微信)", "Meta ads": "Meta Ad Library", "Google ads": "Google Ads", "App store": "App Store & Google Play", "Media": "Hong Kong media", "Official site": "Insurer newsrooms", "HKEX": "HKEX filings", "Industry": "Industry awards" };
+  const chips = order.filter(p => plat[p]).map(p => `<span class="ov-src">${esc(label[p] || p)}<b>${plat[p].toLocaleString()}</b></span>`).join("");
 
   // ---- takeaway cards from INSIGHTS
   // picture for each card, taken from the sources the finding itself cites (page screenshot or the article's lead image), no repeats

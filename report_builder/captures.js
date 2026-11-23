@@ -11,7 +11,7 @@
   if (!caps.length && !media.length) return;
   const BASE = location.protocol === "file:" ? "../report_app/prudential/media/" : "/media/";
   const BR = ["Prudential", "AIA", "Manulife", "AXA"];
-  const CH = { "Meta ad": "Paid ads", Instagram: "Social", Facebook: "Social", YouTube: "Video", Website: "Websites", Xiaohongshu: "Xiaohongshu & WeChat", WeChat: "Xiaohongshu & WeChat" };
+  const CH = { "Meta ad": "Paid ads", Instagram: "Social", Facebook: "Social", YouTube: "Video", Website: "Websites", Xiaohongshu: "Xiaohongshu (RED)", WeChat: "WeChat (微信)" };
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const fmt = d => { const s = String(d || ""); const m = /^(\d{4})-?(\d{2})-?(\d{2})/.exec(s); return m ? `${+m[3]} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2] - 1]} ${m[1]}` : s; };
   const items = [
@@ -19,7 +19,7 @@
     ...media.map(m => ({ brand: m.brand, ch: CH[m.platform] || m.platform, src: m.platform === "Meta ad" ? "Meta Ad Library" : m.platform, date: fmt(m.date), file: m.file, url: m.url,
                          title: m.title || m.text, live: m.captured || "", pilot: m.pilot }))
   ].filter(x => BR.includes(x.brand));
-  const chans = ["All", ...["Paid ads", "Social", "Video", "Websites", "News", "App stores", "Xiaohongshu & WeChat"].filter(c => items.some(x => x.ch === c))];
+  const chans = ["All", ...["Paid ads", "Social", "Video", "Websites", "News", "App stores", "Xiaohongshu (RED)", "WeChat (微信)", "Xiaohongshu & WeChat"].filter(c => items.some(x => x.ch === c))];
   let fc = "All", fb = "All";
 
   const host = document.getElementById("es")?.querySelector(".ov-war") || document.querySelector("#es .ov") || document.getElementById("es");

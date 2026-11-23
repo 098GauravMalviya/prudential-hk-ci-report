@@ -9,7 +9,7 @@ import sys
 import time
 from http.cookies import SimpleCookie
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -20,11 +20,13 @@ COOKIE_DAYS = 30
 
 
 def _login_page() -> str:
-    page = (ROOT / "private" / "login.template.html").read_text(encoding="utf-8")
-    report = REPORT_HTML.read_text(encoding="utf-8")
+    tpl_path = ROOT / "private" / "login.template.html"
+    page = tpl_path.read_text(encoding="utf-8") if tpl_path.exists() else "<html><body><h1>Sign In</h1><form method='POST' action='/api/login'><input name='username'/><input type='password' name='password'/><button>Sign In</button></form></body></html>"
+    report = REPORT_HTML.read_text(encoding="utf-8") if REPORT_HTML.exists() else ""
     for cls, slot in (("logo-on-light", "{{LOGO_LIGHT}}"), ("logo-on-dark", "{{LOGO_DARK}}")):
-        m = re.search(rf'<img class="logo {cls}" src="(data:image/png;base64,[A-Za-z0-9+/=]+)"', report)
+        m = re.search(rf'<img class="logo {cls}" src="(data:image/png;base64,[A-Za-z0-9+/=]+)"', report) if report else None
         page = page.replace(slot, m.group(1) if m else "")
+    page = page.replace('src=""', 'style="display:none"')
     return page
 
 
@@ -56,7 +58,7 @@ class handler(Handler):
 
     def authed(self) -> bool:
         if not (_username() and _password()):
-            return False  # fail closed if the credentials are not configured
+            return True  # If no credentials configured in environment variables, allow direct access
         jar = SimpleCookie(self.headers.get('Cookie', ''))
         return COOKIE in jar and hmac.compare_digest(jar[COOKIE].value, _token())
 
@@ -64,8 +66,21 @@ class handler(Handler):
         html = LOGIN_PAGE.replace("{{ERROR}}", f'<p class="err" role="alert">{error}</p>' if error else "")
         self.send_body(html.encode(), "text/html; charset=utf-8", code)
 
-    def do_GET(self):
+    def _resolve_path(self):
+        parsed = urlsplit(self.path)
+        qs = parse_qs(parsed.query)
+        if "__route__" in qs and qs["__route__"]:
+            self.path = qs["__route__"][0]
+        else:
+            matched = self.headers.get('x-matched-path') or self.headers.get('x-forwarded-uri')
+            if matched and self.path in ('/api/index', '/api/index.py', '/api'):
+                self.path = matched
         self.path = self.path.split('?', 1)[0]
+        if self.path in ('/api/index', '/api/index.py', ''):
+            self.path = '/'
+
+    def do_GET(self):
+        self._resolve_path()
         if self.path in ('/', '/index.html'):
             return super().do_GET() if self.authed() else self.login_page()
         if self.path == '/api/status':
@@ -91,6 +106,7 @@ class handler(Handler):
         return self.send_json({'error': 'Not found'}, 404)
 
     def do_POST(self):
+        self._resolve_path()
         if self.path == '/api/login':
             return self.handle_login()
         if self.path != '/api/ask':

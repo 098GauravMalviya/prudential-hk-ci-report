@@ -45,7 +45,7 @@
   }
   // Executive Summary: after the live captures wall; Competitor Activity: at the top of the page
   const es = document.getElementById("captures") || document.querySelector("#es .ov");
-  mount(es, "afterend", "news-pics", 8);
+  mount(es, "afterend", "news-pics", 6);
   const p2 = document.querySelector("#p2 .sec-head");
-  mount(p2, "afterend", "news-pics-p2", 12);
+  mount(p2, "afterend", "news-pics-p2", 6);
 })();

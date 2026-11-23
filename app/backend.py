@@ -16,7 +16,7 @@ ENV = os.environ
 API_KEY = (ENV.get("GEMINI_API_KEY") or "").strip()
 MODEL = ENV.get("GEMINI_MODEL", "gemini-3.8-flash")
 CONTEXT_WINDOW = int(ENV.get("GEMINI_CONTEXT_WINDOW", 1_048_576))  # 1M tokens
-MAX_OUTPUT_TOKENS = int(ENV.get("GEMINI_MAX_OUTPUT_TOKENS", 8192))
+MAX_OUTPUT_TOKENS = int(ENV.get("GEMINI_MAX_OUTPUT_TOKENS", 1536))
 CACHE_TTL_SECONDS = int(ENV.get("GEMINI_CACHE_TTL", 3600))
 PORT = int(ENV.get("PORT", 8000))
 
@@ -158,7 +158,7 @@ for _p in POSTS:
     for _x in _p["_t"]:
         _DF[_x] = _DF.get(_x, 0) + 1
 _BR = {"prudential": "Prudential", "aia": "AIA", "manulife": "Manulife", "axa": "AXA", "保誠": "Prudential", "友邦": "AIA", "宏利": "Manulife", "安盛": "AXA"}
-def retrieve_posts(question, k=80):
+def retrieve_posts(question, k=16):
     if not POSTS:
         return ""
     qt = set(_terms(question)) - set(_BR)
@@ -181,7 +181,7 @@ for _p in RECORDS:
     _p["_t"] = set(_terms(_p["text"]))
     for _x in _p["_t"]:
         _RDF[_x] = _RDF.get(_x, 0) + 1
-def retrieve_records(question, k=60):
+def retrieve_records(question, k=15):
     if not RECORDS:
         return ""
     qt = set(_terms(question)) - set(_BR)
@@ -211,7 +211,7 @@ def build_request(question: str, history: list) -> dict:
         turns.insert(0, {"role": "model" if h.get("role") == "model" else "user", "parts": [{"text": h.get("text", "")}]})
     turns.append({"role": "user", "parts": [{"text": question + retrieve_posts(question) + retrieve_records(question)}]})
 
-    body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.3, "thinkingConfig": {"thinkingBudget": 512}}}
+    body = {"generationConfig": {"maxOutputTokens": MAX_OUTPUT_TOKENS, "temperature": 0.2, "thinkingConfig": {"thinkingBudget": 0}}}
     if state["mode"] == "explicit":
         body["cachedContent"] = ensure_explicit_cache()
         body["contents"] = turns
@@ -221,7 +221,8 @@ def build_request(question: str, history: list) -> dict:
     return body
 
 
-corpus_text = (APP_DIR / "private/corpus.md").read_text(encoding="utf-8")
+corpus_path = APP_DIR / "private/corpus.md"
+corpus_text = corpus_path.read_text(encoding="utf-8") if corpus_path.exists() else ""
 state["corpus_tokens"] = len(corpus_text) // 3
 state["ready"] = bool(API_KEY)
 if not API_KEY:
@@ -230,8 +231,14 @@ if not API_KEY:
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        if "/api/" in str(args[0] if args else ""):
-            super().log_message(fmt, *args)
+        # Serverless-safe logging: BaseHTTPRequestHandler.log_message requires self.client_address
+        # which is not present in serverless environments like Vercel.
+        addr = self.headers.get("x-forwarded-for", "127.0.0.1") if hasattr(self, "headers") and self.headers else "127.0.0.1"
+        try:
+            dt = self.log_date_time_string()
+        except Exception:
+            dt = time.strftime("%d/%b/%Y %H:%M:%S", time.localtime())
+        sys.stderr.write(f"{addr} - - [{dt}] {fmt % args}\n")
 
     def end_headers(self):
         if self.headers.get("Origin") in ALLOWED_ORIGINS:
@@ -255,9 +262,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        # Only the report page is served - never the project folder (it holds .env).
-        if self.path.split("?")[0] in ("/", "/index.html"):
-            return self.send_body(REPORT_HTML.read_bytes(), "text/html; charset=utf-8")
+        matched = self.headers.get("x-matched-path") or self.headers.get("x-forwarded-uri")
+        if matched and self.path in ("/api/index", "/api/index.py", "/api"):
+            self.path = matched
+        clean_path = self.path.split("?")[0]
+        if clean_path in ("/", "/index.html", "/api/index", "/api/index.py"):
+            return self.send_body(REPORT_HTML.read_bytes(), "text/html; charset=utf-8") if REPORT_HTML.exists() else self.send_body(b"<html><body><h1>Dashboard Ready</h1></body></html>", "text/html; charset=utf-8")
         if self.path == "/api/status":
             return self.send_json({"ready": state["ready"], "error": "unavailable" if state["cache_error"] else None})
         self.send_error(404)

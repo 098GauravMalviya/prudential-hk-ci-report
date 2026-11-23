@@ -332,4 +332,224 @@ li.pd-li-hide { display:none !important; }
 
 /* 6. Mainland Platform Filter Note */
 .cn-filter-note { font:600 11.5px var(--pk-mono) !important; padding:6px 10px !important; border-left:3px solid var(--pk-link) !important; background:var(--pk-surface-2) !important; border-radius:0 4px 4px 0 !important; margin:10px 0 !important; }
+
+/* ==========================================================================
+   UI Improvements: Symmetric Cards, Enhanced Tables, and Formatting Fixes
+   ========================================================================== */
+
+/* 1. Symmetric Card Grid (Fixes 4 on row 1 and 2 on row 2 leaving empty spaces) */
+/* Exactly 3 columns on desktop -> 6 cards display as 3 + 3, zero dangling spaces! */
+.ov-cards, .nw-grid, .vg-strip, .vg-grid, .review-grid, .sw-grid, .cocard-grid, .cn-grid-posts {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+}
+
+@media (max-width: 1040px) {
+  .ov-cards, .nw-grid, .vg-strip, .vg-grid, .review-grid, .sw-grid, .cocard-grid, .cn-grid-posts {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ov-cards, .nw-grid, .vg-strip, .vg-grid, .review-grid, .sw-grid, .cocard-grid, .cn-grid-posts {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Card Equal Height & Content Flow */
+.ov-card, .nw-card, .vg-card, .lc-card, .op-box, .tile, .card {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: 1px solid var(--pk-line) !important;
+  border-radius: 6px !important;
+  background: var(--pk-surface) !important;
+  transition: transform .15s ease, box-shadow .15s ease !important;
+}
+
+.ov-card:hover, .nw-card:hover, .vg-card:hover, .lc-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06) !important;
+  border-color: var(--pk-line-2) !important;
+}
+
+.ov-card .ov-meta, .nw-card .nw-meta {
+  margin-bottom: 8px !important;
+}
+
+.ov-card h4, .nw-card .nw-t {
+  margin: 0 0 8px !important;
+  line-height: 1.45 !important;
+  word-break: break-word !important;
+}
+
+.ov-card p.ov-ev, .nw-card .nw-src {
+  flex: 1 1 auto !important;
+  margin: 0 0 12px !important;
+  line-height: 1.55 !important;
+}
+
+.ov-card .ov-rec {
+  margin-top: auto !important;
+  margin-bottom: 10px !important;
+}
+
+.ov-card .ov-go, .nw-card .nw-acts {
+  margin-top: auto !important;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--pk-line) !important;
+}
+
+/* 2. Individual Cell Separations, Table Borders, Zebra Shading & Metric Highlights */
+.tbl-wrap, section.view .tbl-wrap, .ct-tpanel .tbl-wrap {
+  border: 1px solid var(--pk-line-2) !important;
+  border-radius: 8px !important;
+  background: var(--pk-surface) !important;
+  overflow-x: auto !important;
+  margin: 16px 0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+
+/* Base table with separated cell borders */
+table.tbl, table.cn-tbl, table.ov-tbl, table.ct-fire, table#opCo, table#appTbl, table#hciLineup, section.view table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-size: 13px !important;
+}
+
+/* Individual Cell Borders */
+table.tbl th, table.cn-tbl th, table.ov-tbl th, table.ct-fire th, table#opCo th, table#appTbl th, table#hciLineup th, section.view table th,
+table.tbl td, table.cn-tbl td, table.ov-tbl td, table.ct-fire td, table#opCo td, table#appTbl td, table#hciLineup td, section.view table td {
+  border-right: 1px solid var(--pk-line) !important;
+  border-bottom: 1px solid var(--pk-line) !important;
+  padding: 10px 14px !important;
+  line-height: 1.5 !important;
+  vertical-align: middle !important;
+}
+
+/* Remove perimeter borders to align flush with wrapper */
+table.tbl th:last-child, table.cn-tbl th:last-child, table.ov-tbl th:last-child, table.ct-fire th:last-child, table#opCo th:last-child, table#appTbl th:last-child, table#hciLineup th:last-child, section.view table th:last-child,
+table.tbl td:last-child, table.cn-tbl td:last-child, table.ov-tbl td:last-child, table.ct-fire td:last-child, table#opCo td:last-child, table#appTbl td:last-child, table#hciLineup td:last-child, section.view table td:last-child {
+  border-right: none !important;
+}
+
+table.tbl tr:last-child td, table.cn-tbl tr:last-child td, table.ov-tbl tr:last-child td, table.ct-fire tr:last-child td, table#opCo tr:last-child td, table#appTbl tr:last-child td, table#hciLineup tr:last-child td, section.view table tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Distinct Table Header Row */
+table.tbl th, table.cn-tbl th, table.ov-tbl th, table.ct-fire th, table#opCo th, table#appTbl th, table#hciLineup th, section.view table th {
+  background: var(--pk-surface-2) !important;
+  font: 700 11px var(--pk-mono) !important;
+  text-transform: uppercase !important;
+  letter-spacing: .06em !important;
+  color: var(--pk-ink) !important;
+  border-bottom: 2px solid var(--pk-line-2) !important;
+  white-space: nowrap !important;
+}
+
+/* Alternating Row Zebra Striping */
+table.tbl tbody tr:nth-child(even) td,
+table.cn-tbl tbody tr:nth-child(even) td,
+table.ov-tbl tbody tr:nth-child(even) td,
+table.ct-fire tbody tr:nth-child(even) td,
+section.view table tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+:root[data-theme="dark"] table.tbl tbody tr:nth-child(even) td,
+:root[data-theme="dark"] table.cn-tbl tbody tr:nth-child(even) td,
+:root[data-theme="dark"] section.view table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.025) !important;
+}
+
+/* Row Hover Interaction */
+table.tbl tbody tr:hover td,
+table.cn-tbl tbody tr:hover td,
+table.ov-tbl tbody tr:hover td,
+table.ct-fire tbody tr:hover td,
+section.view table tbody tr:hover td {
+  background: var(--pk-surface-2) !important;
+}
+
+/* Likes / Reactions / Social Highlights */
+.tbl-likes, .like-pill, [data-likes], .tp-meta span.likes, .cn-acts .likes {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font: 700 11.5px var(--pk-mono) !important;
+  color: #d6343c !important;
+  background: #fde8e9 !important;
+  border: 1px solid #f1b9b9 !important;
+  border-radius: 4px !important;
+  padding: 2px 8px !important;
+}
+
+/* Star Ratings & Review Metrics */
+.tbl-stars, .star-pill, .geo-star {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  font: 700 11.5px var(--pk-mono) !important;
+  color: #a86a00 !important;
+  background: #fff7e6 !important;
+  border: 1px solid #f5d9a6 !important;
+  border-radius: 4px !important;
+  padding: 2px 7px !important;
+}
+
+/* High Metric / Percentage Data Cells */
+table td.num b, table th.num b {
+  font-family: var(--pk-mono) !important;
+  font-weight: 700 !important;
+}
+
+table td[style*="background"] {
+  border-radius: 3px !important;
+}
+
+/* 3. Section and Card Formatting / Alignment Fixes */
+section.view {
+  padding-bottom: 40px !important;
+}
+
+.sec-head {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  gap: 12px !important;
+  margin-bottom: 20px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid var(--pk-line) !important;
+}
+
+@media (max-width: 860px) {
+  #one .op-box.ob-hero {
+    grid-template-columns: 1fr !important;
+  }
+  .sec-head {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+/* Brand Pills with verified brand colors */
+.bp-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  font: 600 11.5px var(--pk-mono) !important;
+  border: 1px solid var(--pk-line) !important;
+}
+.bp-pru { background: #fde8e9 !important; color: #d6343c !important; border-color: #f1b9b9 !important; }
+.bp-aia { background: #fff7e6 !important; color: #a86a00 !important; border-color: #f5d9a6 !important; }
+.bp-mfc { background: #e8f8f1 !important; color: #13805a !important; border-color: #b9dcc4 !important; }
+.bp-axa { background: #eaf2fd !important; color: #2a78d6 !important; border-color: #b9cff3 !important; }
 </style>

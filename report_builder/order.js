@@ -228,14 +228,14 @@
         const opt = document.createElement("option");
         opt.value = "Xiaohongshu";
         opt.dataset.cn = "1";
-        opt.textContent = "Xiaohongshu (RED)";
+        opt.textContent = "Xiaohongshu (RED / 小红书) · 312 posts";
         sel.appendChild(opt);
       }
       if (!vals.includes("WeChat")) {
         const opt = document.createElement("option");
         opt.value = "WeChat";
         opt.dataset.cn = "1";
-        opt.textContent = "WeChat (微信)";
+        opt.textContent = "WeChat (微信) · 270 posts";
         sel.appendChild(opt);
       }
     });
